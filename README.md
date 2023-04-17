@@ -9,9 +9,9 @@ The interrupt rate is 1ms for callback duties (tasks) but can be changed as need
 
 The Makefile assumes the folders obj and bin exist, so initially creat these folders. Also, the gcc toolchain from Arm needs to be extracted somewhere, and the toolchain vars in the Makefile will need to be appropriate to its location. My toolchain was extracted in the same folder as the project and the Makefile will reflect that.
 
-My folders-
-src
-include
-obj
-bin
+my folder structure -\
+src\
+include\
+obj\
+bin\
 arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi
