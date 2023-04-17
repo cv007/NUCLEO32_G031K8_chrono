@@ -79,7 +79,7 @@ remove          (taskFunc_t f)
                 //if interval is 0- task runs right away (soon anyway)
                 //will only run 1 time unless task sets interval or runat
                 static auto
-insert          (taskFunc_t f, duration interval = 0)
+insert          (taskFunc_t f, duration interval = std::chrono::milliseconds(0))
                 {
                 remove( f ); //so we do not get multiple instances of function in tasks_
                 for( auto& t : tasks_ ){

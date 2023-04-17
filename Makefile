@@ -4,6 +4,9 @@ TARGET := project
 # mcu in use (will derive hpp header from this name)
 MY_MCU := stm32g031k8
 
+# nucleo32 virtual folder for programming
+VIRTDIR := /media/owner/NOD_G031K8/
+
 # toolhchain
 TOOLCHAIN_PREFIX := arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi
 CC := $(TOOLCHAIN_PREFIX)-gcc
@@ -36,6 +39,7 @@ CXXFLAGS := $(CFLAGS)
 CXXFLAGS += -std=c++17
 CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
+CXXFLAGS += -MMD
 
 # linker flags
 LDFLAGS := -T$(LDSCRIPT)
@@ -48,9 +52,13 @@ LDFLAGS += -fno-exceptions
 # object list (to obj dir) based on all src files
 OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
 
+# dependency files, so if header changes will get compilation
+DEPS := $(OBJS:.o=.d)
+-include $(DEPS)
+
 # produce an o file from cpp source file
 $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
-	@printf "%-40s" "compiling $<"
+	@printf "\t%-40s" "compiling $<"
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 	@printf "ok\n"
 
@@ -61,10 +69,10 @@ default: build
 # build project elf file from object files
 # create lss, hex, bin files from elf file
 build: $(OBJS)
-	@printf "\n   %-40s" "building $(TARGETELF)"
+	@printf "\t%-40s" "building $(TARGETELF)"
 	@$(CXX) $(LDFLAGS) $(OBJS) -o $(TARGETELF) 
 	@printf "ok\n"
-	@printf "   %-40s" "creating lss, hex, bin files"
+	@printf "\t%-40s" "creating lss, hex, bin files"
 	@$(OBJDUMP) -dzC $(TARGETELF) > $(BINDIR)/$(TARGET).lss
 	@$(OBJCOPY) -O ihex $(TARGETELF) $(BINDIR)/$(TARGET).hex
 	@$(OBJCOPY) -O binary $(TARGETELF) $(BINDIR)/$(TARGET).bin
@@ -76,11 +84,12 @@ build: $(OBJS)
 # clean and build
 rebuild: clean build 
 
+
+.PHONY: program clean reprogram
+
 # program bin file to nucleo32 virtual drive
-VIRTDIR := /media/owner/NOD_G031K8/
-.PHONY: program
-program: build
-	@printf "   programming $(BINDIR)/$(TARGET).bin to $(VIRTDIR)..."
+program: 
+	@printf "\tprogramming $(BINDIR)/$(TARGET).bin to $(VIRTDIR)..."
 	@[ -e $(BINDIR)/$(TARGET).bin ] && \
     [ -e $(VIRTDIR) ] && \
     cp $(BINDIR)/$(TARGET).bin $(VIRTDIR) && \
@@ -88,12 +97,9 @@ program: build
     printf "failed\n\n"
 
 # remove object files and bin folder files
-.PHONY: clean
 clean:
+	@printf "\t%-40s" "clean $(OBJDIR) $(BINDIR)"
 	@-rm -f obj/* 
 	@-rm -f bin/*
+	@printf "ok\n"
 
-# check to see what o files are being produced
-.PHONY: check
-check:
-	@echo $(OBJS)

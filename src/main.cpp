@@ -68,7 +68,7 @@ printRandom     (Task_t&)
                 if( not u ) return false;
                 auto& uart = *u;
 
-                auto r = randgen.read();
+                auto r = random.read();
                 uart
                     << fg(255,50,0) << now().time_since_epoch()
                     << fg(20,200,255) << " random " << bin0bpad(32) << r << space 
@@ -130,8 +130,11 @@ ledTask         (Task_t&)
 
                 //a class with its own tasks, so we can duplicae a number of tasks
                 //to test handling the uart exclusively for each task
+////////////////
 class 
-SomeTasks       {
+SomeTasks       
+////////////////
+                {
 
                 static inline SomeTasks* instances_[8];
                 Task_t task_; //func unused
@@ -170,8 +173,8 @@ run             (SomeTasks* st)
 
                 if( idx < 0 ){ 
                     auto n = myInstanceNum(st); 
-                    Rgb color{ randgen.read<u8>(10,255), 
-                               randgen.read<u8>(10,255), 
+                    Rgb color{ random.read<u8>(10,255), 
+                               random.read<u8>(10,255), 
                                static_cast<u8>(n*30) };
                     auto dur = now().time_since_epoch();
                     uart
@@ -187,7 +190,7 @@ run             (SomeTasks* st)
                     }
 
                 if( idx++ < (arraySize(words) + 3) ){
-                    uart << spacew(3) << randgen.read<u8>() << space;
+                    uart << spacew(3) << random.read<u8>() << space;
                     return false;
                     }
 
@@ -196,7 +199,7 @@ run             (SomeTasks* st)
                 uart << normal;
                 board.uart.release( byMe );
                 runCount_++;  
-                st->task_.interval = milliseconds( randgen.read<u16>(500,2000) );
+                st->task_.interval = milliseconds( random.read<u16>(500,2000) );
                 return true; //update interval
                 }
 
@@ -245,8 +248,8 @@ showRandSeeds   (Task_t& task)
                     }
                 //intial interval of 0ms, print data
                 uart << normal << endl << tab
-                     << Hex0xpad(8) << randgen.seed0() << tab 
-                     << Hex0xpad(8) << randgen.seed1() << endl << endl << dec;
+                     << Hex0xpad(8) << random.seed0() << tab 
+                     << Hex0xpad(8) << random.seed1() << endl << endl << dec;
                 //hold uart for 10s so we can view
                 task.interval = 10s;
                 return true;
@@ -273,9 +276,9 @@ main            ()
 
                 //show Random seed values at boot to see if they look ok
                 //run now, run once (will hold onto the uart for 10s)
-                tasks.insert( showRandSeeds, 0ms ); 
+                tasks.insert( showRandSeeds ); 
                 
-                tasks.insert( ledTask, 80ms ); //interval is DOT length
+                tasks.insert( ledTask, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );
                 tasks.insert( SomeTasks::runAll, 1ms ); //a separate set of tasks
                 tasks.insert( printRandom, 250ms );
