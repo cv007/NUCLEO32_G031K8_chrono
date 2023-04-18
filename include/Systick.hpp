@@ -12,8 +12,8 @@ Systick
 ////////////////
                 {
 
-                //set Systick irq priority, currently using lowest priority
-                static constexpr auto irqPriorty_{ Nvic::PRIORITY3 };
+                //default Systick irq priority if not specified, lowest priority
+                static constexpr auto DEFAULT_PRIORITY{ Nvic::PRIORITY3 };
 
                 //stm32g0 has the option to use HCLK/8 as the clock source,
                 //but HCLK is in use here (cpu speed)
@@ -97,13 +97,13 @@ cpuSpeedCheck   ()
                 }
 
                 static Systick
-restart         ()
+restart         (Nvic::IRQ_PRIORITY priority = DEFAULT_PRIORITY)
                 {
                 reg_.CSR = 0; //off  
                 cpuHz_ =  System::cpuHz();          
                 cyclesPerIrq_ = duration_irq::period::num * cpuHz_ / duration_irq::period::den;
                 cpuSpeedCheck(); //check if cpu speed allows using bit shift for cycles to us conversions
-                Nvic::setFunction( MCU::SYSTICK_IRQ, isr, irqPriorty_ );
+                Nvic::setFunction( MCU::SYSTICK_IRQ, isr, priority );
                 reg_.RVR = cyclesPerIrq_ - 1;
                 reg_.CVR = 0;
                 reg_.CSR = 7; //processor clock (already set), irq, enable

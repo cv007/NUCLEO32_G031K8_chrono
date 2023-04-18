@@ -138,7 +138,7 @@ Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ
                 //setup instances_ for isr use- if already setup for this uart something 
                 //is wrong so just skip all other init code
                 if( not insertInst() ) return;  
-                { InterruptLock lock; u.rccInit(); }
+                { InterruptLock lock; u.init(); } //rcc
                 GpioPin(u.txPin)
                     .mode(GpioPin::INPUT)   //first set default state if/when tx not enabled
                     .pull(GpioPin::PULLUP)  //input, pullup (tx idle state)

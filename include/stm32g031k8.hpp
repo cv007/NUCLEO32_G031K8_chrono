@@ -46,9 +46,7 @@ ALTFUNC         { AF0, AF1, AF2, AF4 = 4, AF5, AF6, AF7 };
 IRQn            { SYSTICK_IRQ = -1, USART1_IRQ = 27, USART2_IRQ };
 
 
-                //Uart.hpp needs this header, so cannot include to create a uart_t
-                //in the Uart class
-                //instead- create the uart_t here (that Uart class will use)
+                //used by Uart class
                 using 
 uart_t          = struct {
                     u32         uartAddr;
@@ -56,7 +54,7 @@ uart_t          = struct {
                     ALTFUNC     txAltFunc;
                     PIN         rxPin;
                     ALTFUNC     rxAltFunc;
-                    vvfunc_t    rccInit;
+                    vvfunc_t    init; //such as enable uart in rcc
                     IRQn        irqn;
                     };
 
@@ -65,7 +63,7 @@ Uart2_A2A3      { //Uart2, TX=PA2,RX=PA3
                 USART2_BASE,    //Usart2 base address
                 PA2, AF1,       //tx pin, alt function
                 PA3, AF1,       //rx pin, alt function
-                []{ vu32Ref(RCC_APBENR1) or_eq RCC_USART2ENbm; }, //rcc init
+                []{ vu32Ref(RCC_APBENR1) or_eq RCC_USART2ENbm; }, //init rcc
                 USART2_IRQ      //IRQn
                 };
                

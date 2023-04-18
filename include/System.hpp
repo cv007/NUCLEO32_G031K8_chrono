@@ -19,8 +19,9 @@ cpuHz           (u32 hz){ cpuHz_ = hz; }
 
 public:
 
+                //led info codes
                 enum 
-INFO_CODES      { BOOT_CODE = 33 };
+INFO_CODES      { BOOT_CODE = 22 };
 
                 static auto
 cpuHz           (){ return cpuHz_; }

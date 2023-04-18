@@ -83,7 +83,7 @@ printRandom     (Task_t&)
                 //interval used when adding to tasks is the DOT period
                 //all periods are based on the DOT period
                 static bool
-ledTask         (Task_t&)
+ledMorseCode    (Task_t&)
                 {
 
                 // "sos"
@@ -247,9 +247,10 @@ showRandSeeds   (Task_t& task)
                     return true; //this task gets deleted
                     }
                 //intial interval of 0ms, print data
-                uart << normal << endl << tab
-                     << Hex0xpad(8) << random.seed0() << tab 
-                     << Hex0xpad(8) << random.seed1() << endl << endl << dec;
+                uart << normal << endl 
+                     << "   seed0: " << Hex0xpad(8) << random.seed0() << endl
+                     << "   seed1: " << Hex0xpad(8) << random.seed1() << endl 
+                     << endl << dec;
                 //hold uart for 10s so we can view
                 task.interval = 10s;
                 return true;
@@ -278,7 +279,7 @@ main            ()
                 //run now, run once (will hold onto the uart for 10s)
                 tasks.insert( showRandSeeds ); 
                 
-                tasks.insert( ledTask, 80ms ); //interval is morse DOT length
+                tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );
                 tasks.insert( SomeTasks::runAll, 1ms ); //a separate set of tasks
                 tasks.insert( printRandom, 250ms );
