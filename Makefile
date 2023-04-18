@@ -39,7 +39,7 @@ CXXFLAGS := $(CFLAGS)
 CXXFLAGS += -std=c++17
 CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
-CXXFLAGS += -MMD
+# CXXFLAGS += -MMD
 
 # linker flags
 LDFLAGS := -T$(LDSCRIPT)
@@ -52,27 +52,21 @@ LDFLAGS += -fno-exceptions
 # object list (to obj dir) based on all src files
 OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
 
-# dependency files, so if header changes will get compilation
-DEPS := $(OBJS:.o=.d)
--include $(DEPS)
+# header files list
+HPPS := $(wildcard $(INCLUDEDIR)/*.hpp)
 
-# produce an o file from cpp source file
-$(OBJDIR)/%.o : $(SRCDIR)/%.cpp
-	@printf "\t%-40s" "compiling $<"
+# object files require cpp source files (also compile if Makefile or header changes)
+$(OBJDIR)/%.o : $(SRCDIR)/%.cpp $(HPPS) Makefile
+	@printf "\t%-34s" "compiling $<"
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 	@printf "ok\n"
 
-
-# default is build
-default: build
-
-# build project elf file from object files
-# create lss, hex, bin files from elf file
-build: $(OBJS)
-	@printf "\t%-40s" "building $(TARGETELF)"
+# elf file requires object files
+$(TARGETELF): $(OBJS) 
+	@printf "\t%-34s" "building $(TARGETELF)"
 	@$(CXX) $(LDFLAGS) $(OBJS) -o $(TARGETELF) 
 	@printf "ok\n"
-	@printf "\t%-40s" "creating lss, hex, bin files"
+	@printf "\t%-34s" "creating lss, hex, bin files"
 	@$(OBJDUMP) -dzC $(TARGETELF) > $(BINDIR)/$(TARGET).lss
 	@$(OBJCOPY) -O ihex $(TARGETELF) $(BINDIR)/$(TARGET).hex
 	@$(OBJCOPY) -O binary $(TARGETELF) $(BINDIR)/$(TARGET).bin
@@ -81,14 +75,25 @@ build: $(OBJS)
 	@cat $(BINDIR)/$(TARGET).size.txt
 	@printf "\n"
 
+# bin file, and others that rely on the elf file
+$(BINDIR)/$(TARGET).bin: $(TARGETELF)
+	@$(OBJDUMP) -dzC $(TARGETELF) > $(BINDIR)/$(TARGET).lss
+	@$(OBJCOPY) -O ihex $(TARGETELF) $(BINDIR)/$(TARGET).hex
+	@$(OBJCOPY) -O binary $(TARGETELF) $(BINDIR)/$(TARGET).bin
+	@$(OBJSIZE) $(TARGETELF) > $(BINDIR)/$(TARGET).size.txt
+
+
+# default make target
+default: $(TARGETELF)
+
 # clean and build
-rebuild: clean build 
+rebuild: clean default
 
 
-.PHONY: program clean reprogram
+.PHONY: program clean
 
 # program bin file to nucleo32 virtual drive
-program: 
+program: $(BINDIR)/$(TARGET).bin
 	@printf "\tprogramming $(BINDIR)/$(TARGET).bin to $(VIRTDIR)..."
 	@[ -e $(BINDIR)/$(TARGET).bin ] && \
     [ -e $(VIRTDIR) ] && \
@@ -98,7 +103,7 @@ program:
 
 # remove object files and bin folder files
 clean:
-	@printf "\t%-40s" "clean $(OBJDIR) $(BINDIR)"
+	@printf "\t%-34s" "clean $(OBJDIR) $(BINDIR)"
 	@-rm -f obj/* 
 	@-rm -f bin/*
 	@printf "ok\n"
