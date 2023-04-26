@@ -1,6 +1,6 @@
 #pragma once
 //included by MY_MCU_HEADER
-
+#include <type_traits>
 
 //........................................................................................
 
@@ -19,7 +19,7 @@ waitIrq         (){ asm volatile ("wfi"); }
                 #pragma GCC optimize ("-Os")
                 static constexpr u32  CYCLES_PER_LOOP {4}; //for delayCycles
                 [[ gnu::always_inline ]] inline static auto
-delayCycles     (volatile u32 n) { while( n -= CYCLES_PER_LOOP, n >= CYCLES_PER_LOOP ){} }
+delayCycles     (u32 n) { volatile u32 vn = n; while( vn = vn - CYCLES_PER_LOOP, vn >= CYCLES_PER_LOOP ){} }
 
                 [[ gnu::always_inline ]] inline static auto
 delayMS         (const u16 ms, const u32 cpuHz = MCU::CPUHZ_DEFAULT){ delayCycles(cpuHz/1000*ms); }
@@ -64,6 +64,109 @@ wasDisabled     (){ return status_; }
 wasEnabled      (){ return not wasDisabled(); }
 
                 }; //InterruptLock
+
+//........................................................................................
+
+////////////////
+template<
+typename T 
+>
+class 
+AtomRW          
+////////////////
+                {
+
+                static_assert( std::is_integral<T>::value, "AtomRW T type is not integral" );
+
+public:
+                using type = volatile T; //make value type volatile if not already
+                static constexpr auto is_mcu_atomic_read{ alignof(type) <= 4 }; //mcu specific
+
+                //allow direct access if needed (like if irq's are already off so do not
+                //want irq protection used)
+                type value{ 0 }; 
+
+
+operator T      () const 
+                {
+                if constexpr( is_mcu_atomic_read ) return value;
+                InterruptLock lock; //64bits, so protect read
+                return value; 
+                }  
+
+                T    
+operator =      (const T v) 
+                {
+                if constexpr( is_mcu_atomic_read ) return value = v;
+                InterruptLock lock;
+                return value = v; 
+                }  
+
+                // u32     operator &      () const    { return &value; }   
+                T       operator ++     (const int) { InterruptLock lock; return value = value + 1;  }
+                T       operator --     (const int) { InterruptLock lock; return value = value - 1;  }
+                T       operator +=     (const T v) { InterruptLock lock; return value = value + v;  }
+                T       operator -=     (const T v) { InterruptLock lock; return value = value - v;  }
+                T       operator ++     ()          { InterruptLock lock; return value = value + 1;  }
+                T       operator --     ()          { InterruptLock lock; return value = value - 1;  }
+                T       operator *=     (const T v) { InterruptLock lock; return value = value * v;  }
+                T       operator /=     (const T v) { InterruptLock lock; return value = value / v;  }
+                T       operator %=     (const T v) { InterruptLock lock; return value = value % v;  }
+                T       operator ^=     (const T v) { InterruptLock lock; return value = value ^ v;  }
+                T       operator &=     (const T v) { InterruptLock lock; return value = value & v;  }
+                T       operator |=     (const T v) { InterruptLock lock; return value = value | v;  }
+                T       operator >>=    (const T v) { InterruptLock lock; return value = value >> v; }
+                T       operator <<=    (const T v) { InterruptLock lock; return value = value << v; }
+
+                T 
+setBitmask      (T clrbm, T setbm)
+                {  
+                InterruptLock lock;
+                value = (value bitand compl clrbm) bitor setbm; 
+                return value;
+                }
+
+                T 
+setBitmask      (T setbm)
+                {  
+                InterruptLock lock;
+                value = value bitor setbm; 
+                return value;
+                }
+
+
+                }; //AtomRW
+
+//........................................................................................
+
+////////////////
+template<
+typename T 
+>
+class 
+AtomRO          
+////////////////
+                {
+
+                static_assert( std::is_integral<T>::value, "AtomRO T type is not integral" );
+
+public:
+
+                using type = volatile T; //make value type volatile if not already
+                static constexpr auto is_mcu_atomic_read{ alignof(type) <= 4 }; //mcu specific
+
+                //allow direct access if needed (like if irq's are already off so do not
+                //want irq protection used)
+                const type value; 
+
+operator T      () const 
+                { 
+                if constexpr( is_mcu_atomic_read ) return value;
+                InterruptLock lock;
+                return value; 
+                }
+
+                }; //AtomRO
 
 //........................................................................................
 

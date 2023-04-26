@@ -28,36 +28,40 @@ Systick
                 //for the chrono clock 'now' function (unrelated to above irq duration)
                 using duration_chrono = std::chrono::microseconds;
 
-                //register access
+                //SysTick registers
                 struct Reg { u32 CSR, RVR, CVR, CALIB; };
+
+                //registers reference
                 static inline volatile Reg& reg_{ *(reinterpret_cast<Reg*>(0xE000'E010)) };
 
                 //enums, constants
                 enum { CVR_MASK = 0xFFFFFF };
 
                 //private vars
-                static inline volatile i64  cpuCyclesTotal_;
-                static inline vvfunc_t      callback_;
-                static inline u32           cyclesPerIrq_;
-                static inline u32           cpuHz_;
-                static inline u32           shift1us_; //bit shift for cycles to 1us
+                static inline CPU::AtomRW<volatile i64> atom_cpuCyclesTotal_;
+                static inline volatile bool             wasIrq_; //can see if was cause of wakeup
+                static inline u32                       cyclesPerIrq_;
+                static inline u32                       cpuHz_;
+                static inline u32                       shift1us_; //bit shift for cycles to 1us
                 
 
                 static auto
 isr             ()
                 {
-                //lock is scoped so irq's back on before callback
-                { InterruptLock lock; cpuCyclesTotal_ += cyclesPerIrq_; } 
-                if( callback_ ) callback_();
+                atom_cpuCyclesTotal_ += cyclesPerIrq_;
+                wasIrq_ = true;
                 }
 
-                //could be called with irq's disabled, so cannot assume cpuCyclesTotal_ will be updated
+                //could be called with irq's disabled, so cannot assume atom_cpuCyclesTotal_ 
+                //will be updated when cvr rolls over
                 static i64
 cpuCycles       ()
                 {
-                InterruptLock lock;             //we can protect the cpuCyclesTotal_ read
-                auto counter = reg_.CVR;        //always changing (unless HCLK/8 used)
-                auto total = cpuCyclesTotal_;   //irq's are off, not changing
+                InterruptLock lock;             //simpler to just protect the whole function
+                auto counter = reg_.CVR;        //hardware. always changing (unless HCLK/8 used)
+                //since irq's are aready off, skip the protection for cpuCyclesTotal_
+                //which is AtomRW type
+                auto total = atom_cpuCyclesTotal_.value;  //irq's are off, will not change
                 if( Scb::isSystickPending() ){  //if pending flag is set
                     counter = reg_.CVR;         //read cvr again (whether necessary or not)
                     total += cyclesPerIrq_;     //account for missed irq
@@ -74,13 +78,6 @@ onCheck         ()
                 { 
                 if( (reg_.CSR bitand 3) == 3 ) return;  //irq on, enabled
                 restart(); 
-                }
-
-                static void
-callback        (vvfunc_t f)
-                {
-                //InterruptLock lock; //no need
-                callback_ = f;
                 }
 
                 //called by restart()
@@ -160,6 +157,15 @@ delay           (duration d)
                 while( (now() - tp_start) < d ){
                     if( lowPower ) CPU::waitIrq(); 
                     }
+                }
+
+                bool
+wasIrq          ()
+                {
+                InterruptLock lock;
+                bool ret = wasIrq_;
+                wasIrq_ = false; 
+                return ret; 
                 }
 
                 }; //Systick

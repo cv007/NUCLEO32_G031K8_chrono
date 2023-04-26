@@ -1,7 +1,8 @@
 #pragma once
 #include "Util.hpp"
 #include <string_view>
-
+#include <limits>
+#include <cstdlib> //std::div
 
 //........................................................................................
 
@@ -37,6 +38,7 @@ Print
 
                 //no true 64bit support, but if a 64bit value can be converted to a
                 //u32/i32 without truncation it will be processed, otherwise ignored
+                //for now
 
                 //constant values
                 enum { PRECISION_MAX = 9 }; //max float precision, limited to 9 by use of 32bit integers in calculations
@@ -65,39 +67,61 @@ print           (std::string_view sv)
                 Print&
 print           (const char* str){ return print( std::string_view{ str, __builtin_strlen(str)} ); }
 
-
                 //unsigned int (32bits), prints as string (to above string_view print function)
                 Print&
 print           (const u32 v)
                 {
-                static constexpr u32 BUFSZ{ 32+2 };             //0bx...x-> 32+2 digits max
+                static constexpr char charTableUC[]{ "0123456789ABCDEF" };
+                static constexpr char charTableLC[]{ "0123456789abcdef" };
+                static constexpr u32 BUFSZ{ 32+2 };             //0bx...x-> 32+2 digits max (no 0 termination needed)
                 char buf[BUFSZ];                                //will be used as a string_view
                 u32 idx = BUFSZ;                                //start past end, so pre-decrement bufidx
-                auto insert = [&](char c){ buf[--idx] = c; };   //function to insert c to buf (idx decrementing)
-                auto a = uppercase_ ? 'A' : 'a';
-                auto u8toa = [&](u8 c){ return c<10 ? c+'0' : c-10+a; };
+                const char* ctbl{ uppercase_ ? charTableUC : charTableLC };
                 auto u = v;                                     //make copy to use (v is const)
                 auto w = just_ == internal ? width_ : 0;        //use width_ here if internal justify
                 if( w ) width_ = 0;                             //if internal, clear width_ so not used when value printed
-                while( insert(u8toa(u % base_)), w--, u /= base_ ){} //add printable digits to buf
-                while( w-- > 0 ) insert( fill_ );               //add internal fill, if any
-                switch( base_ ){                                //any other things to add
-                    case dec: if( isNeg_ ) insert('-'); else if( pos_ ) insert('+');    break;
-                    case bin: if( showbase_ ){ insert('b'); insert ('0'); }             break;
-                    case oct: if( showbase_ and v ) insert('0');                        break;
-                    case hex: if( showbase_ ){ insert('x'); insert('0'); }              break;
-                    }
-                return print( {&buf[idx], BUFSZ-idx} );         //call string_view version of print
-                }
 
+                auto insert = [&](char c){ buf[--idx] = c; };   //function to insert char to buf (idx decrementing)
+                auto internalFill = [&](){ while( w-- > 0 ) insert( fill_ ); }; //internal fill
+
+                switch( base_ ){ //bin,oct,hex use shifts, dec uses division
+                    case bin: 
+                        while( insert('0' + (u bitand 1)), w--, u >>= 1 ){} 
+                        internalFill();
+                        if(showbase_){ insert('b'); insert('0'); } //0b
+                        break;
+                    case oct:
+                        while( insert(ctbl[u bitand 7]), w--, u >>= 3 ){} 
+                        internalFill(); 
+                        if(showbase_ and v) insert('0'); //leading 0 unless v was 0
+                        break;
+                    case hex: 
+                        while( insert(ctbl[u bitand 15]), w--, u >>= 4 ){} 
+                        internalFill();
+                        if(showbase_){ insert('x'); insert('0'); } //0x
+                        break;
+                    default: //dec
+                        do{
+                            //group % / so compiler makes only 1 call to divmod
+                            u32 rem = u % base_; 
+                            u /= base_; 
+                            insert( ctbl[rem] ); 
+                            w--;
+                            } while( u );
+                        internalFill();
+                        if(isNeg_) insert('-'); else if(pos_) insert('+'); //- if negative, + if pos_ set and not 0
+                        break;
+                    }
+                return print( {&buf[idx], BUFSZ-idx} ); //call string_view version of print
+                }
 
                 //float, prints as string (to above string_view print function)
                 Print&
 print           (const float cf)
                 {
                 //check for nan/inf
-                if( __builtin_isnan(cf) ) return print( "nan" );
-                if( __builtin_isinf_sign(cf) ) return print( "inf" );
+                if( __builtin_isnan(cf) ) return print( uppercase_ ? "NAN" : "nan" );
+                if( __builtin_isinf_sign(cf) ) return print( uppercase_ ? "INF" : "inf" );
                 //we are limited by choice to using 32bit integers, so check for limits we can handle
                 //raw float value of 0x4F7FFFFF is 4294967040.0, and the next value we will exceed a 32bit integer
                 if( (cf > 4294967040.0) or (cf < -4294967040.0) ) return print( "ovf" );

@@ -1,15 +1,9 @@
 #pragma once
+#include "Startup.hpp" //linker symbols for stack
 #include "NiceTypes.hpp"
 #include <random>
 #include <type_traits>
 
-
-//........................................................................................
-
-                //linker symbols, unitialized ram start/end of stack space 
-                //can use for seed values
-                extern u32 _sstack[]; 
-                extern u32 _estack[]; 
 
 //........................................................................................
 
@@ -36,13 +30,12 @@ public:
                 //whether power on or reboot, these values will be unpredictable
 RandomGenLFSR16 ()
                 {
-                u32 s0{0}, s1{0};
-                for( auto ramptr = _sstack; ramptr < (_estack-2); ){
-                    s0 xor_eq *ramptr++;
-                    s1 xor_eq *ramptr++;
+                for( auto p = _sstack; p < _estack; p += 2 ){
+                    seed0_ xor_eq p[0];
+                    seed1_ xor_eq p[1];
                     }
-                seed0_ = s0 ? s0 : 0x12345678; //seeds cannot be 0
-                seed1_ = s1 ? s1 : 0x87654321; //so set to some value if 0
+                seed0_ or_eq 1; //seeds cannot be 0
+                seed1_ or_eq 8; //so simply set a bit in each to make sure
                 lfsr31_ = seed0_;
                 lfsr32_ = seed1_;
                 }

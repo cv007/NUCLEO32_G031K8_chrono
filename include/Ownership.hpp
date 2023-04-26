@@ -5,11 +5,9 @@
 //........................................................................................
 
 ////////////////
-template
-<
+template <
 typename T      //device (device requires an isIdle() function- returns true when its 
 >               //ready to take on a new owner, or simply returns true if not necessary
-////////////////
 class
 Ownership
 ////////////////

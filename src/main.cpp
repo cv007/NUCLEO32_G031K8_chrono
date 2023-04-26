@@ -13,6 +13,7 @@
 #include "Tasks.hpp"
 #include "Print.hpp"
 #include "MorseCode.hpp"
+#include "Lptim.hpp"
 
 
 //........................................................................................
@@ -37,8 +38,8 @@
                 static bool
 printTask       (Task_t& task)
                 {
-                static const auto byMe{ reinterpret_cast<u32>(printTask) };
-                Uart* u = board.uart.take( byMe );
+                static const auto id{ reinterpret_cast<u32>(printTask) };
+                Uart* u = board.uart.take( id );
                 if( not u ) return false;
                 auto& uart = *u;
                 
@@ -53,8 +54,9 @@ printTask       (Task_t& task)
                     << fg(GREEN) << Hex0xpad(4) << n << space
                     << fg(GREEN_YELLOW) << bin0bpad(16) << n 
                     << endl << FMT::reset << normal;
+
                 n++;
-                board.uart.release( byMe );
+                board.uart.release( id );
                 return true;
                 } //printTask
 
@@ -63,18 +65,21 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t&)
                 {
-                static const auto byMe{ reinterpret_cast<u32>(printRandom) };
-                Uart* u = board.uart.take( byMe );
+                static const auto id{ reinterpret_cast<u32>(printRandom) };
+
+                Uart* u = board.uart.take( id );
                 if( not u ) return false;
                 auto& uart = *u;
 
                 auto r = random.read();
+
                 uart
                     << fg(255,50,0) << now().time_since_epoch()
                     << fg(20,200,255) << " random " << bin0bpad(32) << r << space 
                     << fg(20,255,200) << Hex0xpad(8) << r 
                     << endl << FMT::reset << normal;
-                board.uart.release( byMe );
+
+                board.uart.release( id );
                 return true;
                 } //printRandom
 
@@ -166,8 +171,8 @@ run             (SomeTasks* st)
                 static int idx{ -1 }; //-1 will printer header
                 static const char* words[]{ "Hello", "World" };
 
-                auto byMe{ reinterpret_cast<u32>(st) };
-                Uart* u = board.uart.take( byMe );
+                auto id{ reinterpret_cast<u32>(st) };
+                Uart* u = board.uart.take( id );
                 if( not u ) return false;
                 auto& uart = *u;
 
@@ -177,9 +182,11 @@ run             (SomeTasks* st)
                                random.read<u8>(10,255), 
                                static_cast<u8>(n*30) };
                     auto dur = now().time_since_epoch();
+
                     uart
                         << fg(color) << dur << " [" << Hex0xpad(8) << reinterpret_cast<u32>(this) << dec << "]["
                         << n << "][" << decpad(10) << runCount_ << "] ";
+
                     idx++;
                     return false;
                     }
@@ -197,7 +204,7 @@ run             (SomeTasks* st)
                 uart << endl;
                 idx = -1;
                 uart << normal;
-                board.uart.release( byMe );
+                board.uart.release( id );
                 runCount_++;  
                 st->task_.interval = milliseconds( random.read<u16>(500,2000) );
                 return true; //update interval
@@ -237,13 +244,13 @@ runAll          (Task_t&)
                 static bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                auto byMe{ reinterpret_cast<u32>(showRandSeeds) };
-                Uart* u = board.uart.take( byMe );
+                static const auto id{ reinterpret_cast<u32>(showRandSeeds) };
+                Uart* u = board.uart.take( id );
                 if( not u ) return false; //keep trying
                 auto& uart = *u;
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
-                    board.uart.release( byMe ); //now release uart
+                    board.uart.release( id ); //now release uart
                     return true; //this task gets deleted
                     }
                 //intial interval of 0ms, print data
@@ -251,9 +258,28 @@ showRandSeeds   (Task_t& task)
                      << "   seed0: " << Hex0xpad(8) << random.seed0() << endl
                      << "   seed1: " << Hex0xpad(8) << random.seed1() << endl 
                      << endl << dec;
-                //hold uart for 10s so we can view
-                task.interval = 10s;
+                //hold uart for 5s so we can view
+                task.interval = 5s;
                 return true;
+                }
+
+//........................................................................................
+
+                void
+timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
+                {  //will assume we are the only function used, no return
+                static const auto id{ reinterpret_cast<u32>(testPrintu32) };
+                Uart* u = board.uart.take( id ); //if we are the only function in use, should not fail
+                if( not u ) return; 
+                auto& uart = *u;
+                uint32_t v = 0xFFFFFFFF;
+                uart << bin; //set as needed
+                while(1){
+                    board.debugPin.on();
+                    uart << v; //dec 307us, hex 298us, oct 417, bin 693us
+                    board.debugPin.off();
+                    delay( 20ms );
+                    }
                 }
 
 //........................................................................................
@@ -269,25 +295,28 @@ main            ()
                 //systick started at first use (infoCode uses systick, so already started)
                 //restart systick after any clock speed changes
                 //systick.restart();                
-                //set callback only, or restart first
-                //systick.callback( tasks.run );
-                systick.restart().callback( tasks.run );
 
                 //add tasks
 
                 //show Random seed values at boot to see if they look ok
-                //run now, run once (will hold onto the uart for 10s)
+                //run now, run once (will hold onto the uart for 5s)
                 tasks.insert( showRandSeeds ); 
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );
-                tasks.insert( SomeTasks::runAll, 1ms ); //a separate set of tasks
+                //tasks.insert( SomeTasks::runAll, 1ms ); //a separate set of tasks
                 tasks.insert( printRandom, 250ms );
 
                 while(1){ 
-                    CPU::waitIrq();
-                    //watch wake periods (interrupts) via logic analyzer
-                    board.debugPin.toggle();
+                    //watch run periods via logic analyzer
+                    board.debugPin.on();
+                    auto nextRunAt = tasks.run();
+                    board.debugPin.off();
+                    while(1){
+                        CPU::waitIrq();
+                        if( not systick.wasIrq() ) continue;
+                        if( nextRunAt <= now() ) break;
+                        }
                     }
 
                 } //main

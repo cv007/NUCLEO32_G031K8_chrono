@@ -36,7 +36,8 @@
                 extern "C" u8  _erelocate   [];
                 extern "C" u8  _sbss        []; //bss (zeroed)
                 extern "C" u8  _ebss        [];
-                extern "C" u32 _estack      []; //stack address
+                extern "C" u32 _sstack      []; //stack address start
+                extern "C" u32 _estack      []; //stack address end
 
                 //vector table in ram, stores void(*)() function pointers
                 extern "C" vvfunc_t _sramvectors[CPU::VECTORS_SIZE];

@@ -17,11 +17,23 @@ MCU
 
                 enum
                 { RCC_BASE = 0x4002'1000, RCC_IOPENR = RCC_BASE+0x34,
-                  RCC_APBENR1 = RCC_BASE+0x3C, RCC_USART2ENbm = 1<<17 };
+                  RCC_APBENR1 = RCC_BASE+0x3C, RCC_USART2ENbm = 1<<17,
+                  RCC_LPTIM2ENbm = 1<<30, RCC_LPTIM1ENbm = 1<<31,
+                  RCC_CCIPR = RCC_BASE+0x54, LPTIM2SELbp = 20, LPTIM1SELbp = 18,
+                  LPTIMSELbm = 3,
+                  RCC_CSR = RCC_BASE+0x60, LSIONbm = 1 };
 
                 enum 
-                { USART1_BASE = 0x4001'3800, USART2_BASE = 0x4000'4400,
-                  USARTn_COUNT = 2 };
+USARTn          { USART1_BASE = 0x4001'3800, USART2_BASE = 0x4000'4400 };
+
+                enum 
+                { USARTn_COUNT = 2 };
+
+                enum 
+LPTIMn          { LPTIM1_BASE = 0x4000'7C00, LPTIM2_BASE = 0x4000'9400 };
+
+                enum 
+                { LPTIMn_COUNT = 2 };
 
 
                 enum
@@ -43,13 +55,13 @@ ALTFUNC         { AF0, AF1, AF2, AF4 = 4, AF5, AF6, AF7 };
 
 
                 enum
-IRQn            { SYSTICK_IRQ = -1, USART1_IRQ = 27, USART2_IRQ };
+IRQn            { SYSTICK_IRQ = -1, USART1_IRQ = 27, USART2_IRQ, LPTIM1_IRQ = 17, LPTIM2_IRQ };
 
 
                 //used by Uart class
                 using 
 uart_t          = struct {
-                    u32         uartAddr;
+                    USARTn      addr;
                     PIN         txPin;
                     ALTFUNC     txAltFunc;
                     PIN         rxPin;
@@ -63,10 +75,46 @@ Uart2_A2A3      { //Uart2, TX=PA2,RX=PA3
                 USART2_BASE,    //Usart2 base address
                 PA2, AF1,       //tx pin, alt function
                 PA3, AF1,       //rx pin, alt function
-                []{ vu32Ref(RCC_APBENR1) or_eq RCC_USART2ENbm; }, //init rcc
+                []{ vu32Ref(RCC_APBENR1) = vu32Ref(RCC_APBENR1) bitor RCC_USART2ENbm; }, //init rcc
                 USART2_IRQ      //IRQn
                 };
                
+
+                using 
+lptim_t         = struct {
+                    LPTIMn      addr;
+                    vvfunc_t    init; //such as enable uart in rcc
+                    IRQn        irqn;
+                    };
+
+                static constexpr lptim_t
+Lptim1LSI       { 
+                LPTIM1_BASE,
+                []{ //init
+                    vu32Ref(RCC_CSR) = LSIONbm;
+                    vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM1ENbm;
+                    vu32Ref(MCU::RCC_CCIPR) = 
+                        (vu32Ref(MCU::RCC_CCIPR) 
+                        bitand compl (LPTIMSELbm<<LPTIM1SELbp)) 
+                        bitor 1<<LPTIM1SELbp;
+                    }, 
+                LPTIM1_IRQ
+                };
+
+                static constexpr lptim_t
+Lptim2LSI       { 
+                LPTIM2_BASE,
+                []{ //init
+                    vu32Ref(RCC_CSR) = LSIONbm;
+                    vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM2ENbm;
+                    vu32Ref(MCU::RCC_CCIPR) = 
+                        (vu32Ref(MCU::RCC_CCIPR) 
+                        bitand compl (LPTIMSELbm<<LPTIM2SELbp)) 
+                        bitor 1<<LPTIM2SELbp;
+                    }, 
+                LPTIM2_IRQ
+                };
+
                 } //MCU
 
 //........................................................................................

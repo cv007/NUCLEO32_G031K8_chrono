@@ -42,12 +42,14 @@ CFLAGS += -fdata-sections
 CFLAGS += -ffunction-sections
 CFLAGS += -Wall
 CFLAGS += -Wextra
+CFLAGS += --specs=nano.specs
 
 # C++ flags
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS += -std=c++17
+CXXFLAGS += -std=c++20
 CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
+CXXFLAGS += -fmodules-ts
 
 # linker flags
 LDFLAGS := -T$(LSCRIPT)
@@ -56,6 +58,8 @@ LDFLAGS += -mcpu=cortex-m0plus
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS += -Wl,-Map=$(TARGETMAP)
 LDFLAGS += -fno-exceptions
+LDFLAGS += -Wl,-wrap=malloc #will find out if malloc/alloc is used without our knowledge
+LDFLAGS += -Wl,-wrap=calloc #such as a library function that gets brought in
 
 # object list (to obj dir) based on all src files
 OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
@@ -63,28 +67,37 @@ OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
 # header files list
 HPPS := $(wildcard $(INCDIR)/*.hpp)
 
+STRCPP := "   compile      "
+STRELF := "   link         "
+STRBIN := "   bin          "
+STRRM  := "   clean        "
+STRPGM := "   programming  "
+STRHEX := "   hex          "
+
 # object files require cpp source files (also compile if Makefile or header changes)
 $(OBJDIR)/%.o : $(SRCDIR)/%.cpp $(HPPS) Makefile
-	@printf "\t%-34s" "compiling $<"
+	@printf "%s%s\n" $(STRCPP) "$<"
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
-	@printf "ok\n"
 
 # elf file requires object files
 $(TARGETELF) : $(OBJS) 
-	@printf "\t%-34s" "building $(TARGETELF)"
+	@printf "%s%s\n\n" $(STRELF) "$(TARGETELF)"
 	@$(CXX) $(LDFLAGS) $(OBJS) -o $(TARGETELF) 
-	@printf "ok\n"
-	@printf "\t%-34s" "creating lss, hex, bin files"
 	@$(OBJDUMP) -dzC $(TARGETELF) > $(TARGETLSS)
-	@$(OBJCOPY) -O ihex $(TARGETELF) $(TARGETHEX)
-	@$(OBJCOPY) -O binary $(TARGETELF) $(TARGETBIN)
 	@$(OBJSIZE) $(TARGETELF) > $(TARGETSIZ)
-	@printf "ok\n\n"
 	@cat $(TARGETSIZ)
 	@printf "\n"
 
-# bin file, and others that rely on the elf file
+# bin file
 $(TARGETBIN) : $(TARGETELF)
+	@printf "%s%s\n" $(STRBIN) "$(TARGETBIN)"
+	@$(OBJCOPY) -O binary $(TARGETELF) $(TARGETBIN)
+
+# hex file
+$(TARGETHEX) : $(TARGETELF)
+	@printf "%s%s\n" $(STRHEX) "$(TARGETHEX)"
+	@$(OBJCOPY) -O ihex $(TARGETELF) $(TARGETHEX)
+
 
 # default make target
 default : $(TARGETELF)
@@ -97,7 +110,7 @@ rebuild : clean default
 
 # program bin file to nucleo32 virtual drive
 program : $(TARGETBIN)
-	@printf "\tprogramming $(TARGETBIN) to $(VIRTDIR)..."
+	@printf "%s%s" $(STRPGM) "$(TARGETBIN) to $(VIRTDIR)..."
 	@[ -e $(TARGETBIN) ] && \
     [ -e $(VIRTDIR) ] && \
     cp $(TARGETPRE).bin $(VIRTDIR) && \
@@ -106,8 +119,7 @@ program : $(TARGETBIN)
 
 # remove object files and bin folder files
 clean :
-	@printf "\t%-34s" "clean $(OBJDIR) $(BINDIR)"
+	@printf "%s%s\n" $(STRRM) "$(OBJDIR)/ $(BINDIR)/"
 	@-rm -f $(OBJDIR)/* 
 	@-rm -f $(BINDIR)/*
-	@printf "ok\n"
 

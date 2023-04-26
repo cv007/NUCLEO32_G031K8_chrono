@@ -33,9 +33,9 @@ Uart
                 enum { TEbm = 1<<3, UEbm = 1, TXEbm = 1<<7, TCbm = 1<<6 };
 
                 auto
-txeIrqOn        () { reg_.CR1 or_eq TXEbm; }
+txeIrqOn        () { reg_.CR1 = reg_.CR1 bitor TXEbm; }
                 auto
-txeIrqOff       () { reg_.CR1 and_eq compl TXEbm; }
+txeIrqOff       () { reg_.CR1 = reg_.CR1 bitand compl TXEbm; }
                 auto
 txOn            () { reg_.CR1 = TEbm bitor UEbm; }
                 auto
@@ -128,9 +128,17 @@ isIdle          (){ return buffer_.isEmpty() and isTxComplete(); }
                 virtual bool
 write           (const char c){ return writeBuffer(c); }
 
+                //binary array of data
+                template<unsigned N> bool
+write           (std::array<u8,N>& arr)
+                { 
+                for( auto c : arr ) writeBuffer(c); 
+                return true;
+                }
+
                 template<unsigned N>
 Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ_PRIORITY irqPriority)
-                : reg_( *(reinterpret_cast<Reg*>(u.uartAddr)) ),
+                : reg_( *(reinterpret_cast<Reg*>(u.addr)) ),
                   buffer_( buffer ),
                   irqPriorty_( irqPriority ),
                   irqn_( u.irqn )

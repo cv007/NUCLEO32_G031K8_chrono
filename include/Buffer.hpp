@@ -11,18 +11,21 @@ Buffer
 ////////////////
                 {
 
-                u8* const       buf_;
-                const unsigned  siz_;
-                unsigned        idxIn_;
-                unsigned        idxOut_;
-                unsigned        count_;     //count of unread data in the buffer
-                unsigned        maxcount_;  //keep track of max buffer used
+                u8* const   buf_;
+                u16 const   size_;
+                u8*         inPtr_;
+                u8*         outPtr_;
+                unsigned    count_{ 0 };    //count of unread data in the buffer
+                unsigned    maxcount_{ 0 }; //keep track of max buffer used
 
 public:
 
                 template<unsigned N>
 Buffer          (std::array<u8,N>& buf) 
-                : buf_(buf.data()), siz_(N) 
+                : buf_{ buf.data() }, 
+                  size_{ N },
+                  inPtr_{ buf_ },
+                  outPtr_{ buf_ }
                 {}
 
                 bool
@@ -31,8 +34,8 @@ read            (u8& v)
                 InterruptLock lock;
                 if( count_ == 0 ) return false;
                 count_--;
-                v = buf_[idxOut_++];
-                if( idxOut_ >= siz_ ) idxOut_ = 0;
+                v = *outPtr_++;
+                if( outPtr_ >= &buf_[size_] ) outPtr_ = buf_;
                 return true;
                 }
 
@@ -40,11 +43,11 @@ read            (u8& v)
 write           (u8 v)
                 {
                 InterruptLock lock;
-                if( count_ >= siz_ ) return false;
+                if( count_ >= size_ ) return false;
                 count_++;
                 if( count_ > maxcount_ ) maxcount_ = count_;
-                buf_[idxIn_++] = v;
-                if( idxIn_ >= siz_ ) idxIn_ = 0;
+                *inPtr_++ = v;
+                if( inPtr_ >= &buf_[size_] ) inPtr_ = buf_;
                 return true;
                 }
 
@@ -55,8 +58,8 @@ clear           ()
                 InterruptLock lock;
                 count_ = 0;
                 maxcount_ = 0;
-                idxIn_ = 0;
-                idxOut_ = 0;
+                inPtr_ = buf_;
+                outPtr_ = buf_;
                 }
 
                 auto  
@@ -64,13 +67,13 @@ maxUsed         () { InterruptLock lock; return maxcount_; }
                 auto  
 sizeUsed        () { InterruptLock lock; return count_; }
                 auto  
-isFull          () { return sizeUsed() >= siz_; }
+isFull          () { return sizeUsed() >= size_; }
                 auto    
 isEmpty         () { return sizeUsed() == 0; }
                 auto  
-sizeFree        () { return siz_ - sizeUsed(); }
+sizeFree        () { return size_ - sizeUsed(); }
                 auto  
-sizeMax         () { return siz_; }
+sizeMax         () { return size_; }
 
                 }; //Buffer
 

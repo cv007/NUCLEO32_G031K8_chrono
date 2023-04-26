@@ -6,12 +6,10 @@
 //........................................................................................
 
 ////////////////
-template
-<
-typename Clock_,    //a chrono compatible clock
-int N               //task list array size
->                                  
-////////////////
+template <
+typename Clock, //a chrono compatible clock
+int N           //task list array size    
+>                                      
 class
 Tasks           
 ////////////////
@@ -19,8 +17,8 @@ Tasks
 public:
                 struct Task;
                 using taskFunc_t = bool(*)(Task&);
-                using duration = typename Clock_::duration;
-                using time_point = typename Clock_::time_point;
+                using duration = typename Clock::duration;
+                using time_point = typename Clock::time_point;
 
                 struct Task {
                     time_point runat;   //next run time
@@ -42,7 +40,7 @@ private:
 run             (Task& t, bool force = false)
                 {
                 if( not t.func ) return;
-                auto tp = Clock_::now(); //time_point
+                auto tp = Clock::now(); //time_point
                 if( not force and (t.runat > tp) ) return;
                 if( not t.func( t ) ) return;
                 if( t.interval.count() > 0 ) t.runat = tp + t.interval;
@@ -62,8 +60,17 @@ run             (taskFunc_t f){ for(auto& t : tasks_) if(t.func == f) run(t, tru
                 //interval > 0 -> next run (runat) will be at interval+'now'
                 //interval <= 0 and if runat <= 'now' -> task will be removed
                 //interval <= 0 and runat > 'now' -> next run will be at runat
-                static void
-run             (){ for( auto& t : tasks_ ) run(t); }
+                static time_point
+run             ()
+                { 
+                for( auto& t : tasks_ ) run(t); 
+                time_point next{ Clock::now() + std::chrono::hours(24) }; //future
+                for( auto& t : tasks_ ){
+                    if( not t.func ) continue;
+                    if( t.runat < next ) next = t.runat; //find soonest next runat time
+                    }
+                return next; //return next time we need to run
+                }
 
 
                 static auto
@@ -86,7 +93,7 @@ insert          (taskFunc_t f, duration interval = std::chrono::milliseconds(0))
                     if( t.func ) continue;
                     t.func = f;
                     t.interval = interval;
-                    t.runat = Clock_::now() + interval;
+                    t.runat = Clock::now() + interval;
                     return true;
                     }
                 return false;
