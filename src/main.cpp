@@ -268,7 +268,7 @@ showRandSeeds   (Task_t& task)
                 void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                static const auto id{ reinterpret_cast<u32>(testPrintu32) };
+                static const auto id{ reinterpret_cast<u32>(timePrintu32) };
                 Uart* u = board.uart.take( id ); //if we are the only function in use, should not fail
                 if( not u ) return; 
                 auto& uart = *u;

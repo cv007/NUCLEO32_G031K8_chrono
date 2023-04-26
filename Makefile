@@ -50,6 +50,7 @@ CXXFLAGS += -std=c++20
 CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += -fmodules-ts
+CXXFLAGS += -fno-rtti
 
 # linker flags
 LDFLAGS := -T$(LSCRIPT)
