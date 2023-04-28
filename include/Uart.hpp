@@ -14,7 +14,8 @@
 class
 Uart            
 ////////////////
-                : public FMT::Print
+                : public FMT::Print, 
+                  public CPU::ClassIsr
                 {
 
                 struct Reg { u32 CR1, CR2, CR3, BRR, GTPR, RTOR, RQR, ISR, ICR, RDR, 
@@ -24,11 +25,6 @@ Uart
                 Buffer              buffer_;
                 Nvic::IRQ_PRIORITY  irqPriorty_;
                 MCU::IRQn           irqn_;
-
-                //static, for isr use, stores 'this' object for each uart class in use
-                //isr will match irqn_ to active irq number for inst to use
-                using irqinst_t = struct { MCU::IRQn irqn; Uart* inst; };
-                static inline irqinst_t instances_[MCU::USARTn_COUNT]; 
 
                 enum { TEbm = 1<<3, UEbm = 1, TXEbm = 1<<7, TCbm = 1<<6 };
 
@@ -42,13 +38,12 @@ txOn            () { reg_.CR1 = TEbm bitor UEbm; }
 isTxFull        (){ return (reg_.ISR bitand TXEbm) == 0; }
                 auto 
 isTxComplete    (){ return reg_.ISR bitand TCbm; }
-
-                static auto
-bufferTx        (Uart& u)
+                auto
+bufferTx        ()
                 {
                 u8 v = 0;
-                if( u.buffer_.read(v) ) u.reg_.TDR = v;
-                else u.txeIrqOff();
+                if( buffer_.read(v) ) reg_.TDR = v;
+                else txeIrqOff();
                 }
 
                 bool
@@ -61,7 +56,7 @@ writeBuffer     (const char c)
                     if( Nvic::activePriority() > irqPriorty_ ) continue; //let isr handle it
                     //isr cannot help
                     while( isTxFull() ){} //first wait for hardware
-                    bufferTx(*this);
+                    bufferTx();
                     Nvic::clearPending( irqn_ ); //clear irq pending
                     break;
                     } //now buffer has room for at least 1 byte...
@@ -75,49 +70,19 @@ writeBuffer     (const char c)
                 }
 
                 // buffer -> uart hardware
-                //static so we can put address into vector table, but then need to get 
-                //a Uart object stored in instances_
-                static void 
-isr             ()
-                {
-                //not checking ISR.TXE bit (should be 1) as we only use TXEIE so only one way to get here
-                //flag is cleared when TDR is written
-                auto u = readInst(); //get a Uart pointer for this irq
-                if( u ) bufferTx( *u );
-                }
+                void
+isr             () override 
+                { bufferTx(); }
 
                 auto
 baud            (u32 baudVal)
                 { //default 16 sample rate
-                reg_.BRR = (System::cpuHz()/baudVal) bitand 0xFFFF; //BRR is 16bits
-                }
-
-                //called by constructor, irqN/this pairs stored in instances_
-                //(no remove function, so is a insert only process)
-                auto
-insertInst      ()
-                {
-                for( auto& ri : instances_ ){
-                    if( ri.irqn == irqn_ ) return false; //already used, something is wrong
-                    if( ri.irqn ) continue; //in use by another uart instance
-                    ri.irqn = irqn_;
-                    ri.inst = this;
-                    return true;
-                    }
-                return false; //overbooked, something wrong 
-                }
-
-                //called by static isr() function, get Uart object store in instances_
-                //match current irq number to get Uart pointer in instances_
-                static Uart*
-readInst        ()
-                {
-                Uart* u = nullptr;
-                auto irqn = Scb::activeIrq(); //current irq number
-                for( auto& ri : instances_ ){
-                    if( ri.irqn == irqn ) return ri.inst; 
-                    }
-                return u; //somehting wrong (isr function will do nothing)
+                //most likely any normal baud rate will fall within the brr available 16bits 
+                //but if not, the user will find out (uart will not work as intended)
+                //(if baud too high or low for cpu clock in use, will not get desired baud rate)
+                auto v = System::cpuHz()/baudVal;
+                if( v > 0xFFFF ) v = 0xFFFF;
+                reg_.BRR = v; 
                 }
 
 public:
@@ -143,16 +108,13 @@ Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ
                   irqPriorty_( irqPriority ),
                   irqn_( u.irqn )
                 {
-                //setup instances_ for isr use- if already setup for this uart something 
-                //is wrong so just skip all other init code
-                if( not insertInst() ) return;  
                 { InterruptLock lock; u.init(); } //rcc
                 GpioPin(u.txPin)
                     .mode(GpioPin::INPUT)   //first set default state if/when tx not enabled
                     .pull(GpioPin::PULLUP)  //input, pullup (tx idle state)
                     .altFunc( u.txAltFunc); //now set pin to uart tx fnction
                 baud( baudVal );
-                Nvic::setFunction( irqn_, isr, irqPriorty_ );
+                Nvic::setFunction( irqn_, this, irqPriorty_ );
                 txOn();
                 }
 

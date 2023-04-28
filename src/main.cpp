@@ -304,7 +304,7 @@ main            ()
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );
-                //tasks.insert( SomeTasks::runAll, 1ms ); //a separate set of tasks
+                tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks
                 tasks.insert( printRandom, 250ms );
 
                 while(1){ 

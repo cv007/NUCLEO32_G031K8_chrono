@@ -217,6 +217,47 @@ activeIrq       () { return MCU::IRQn( (scb_.ICSR bitand 0x3F) - 16 ); }
 
 //........................................................................................
 
+                //peripheral class which does not use static methods needs a way to hook
+                //up the vector table function pointer to a class object
+                //any peripheral class that needs to do so, can inherit this class and
+                //create the required virtual isr function
+
+                // interrupt-
+                //      address in vector table read (_sramvectors[n])
+                //      jump to address from vector table read, which is func()
+                //      func()- reads active irq number (IRQn type- -15 to 32)   
+                //      lookup ClassIsr pointer in vectorTable_, if not 0 call
+                //      isr virtual function
+
+//////////////// CPU::
+class
+ClassIsr           
+////////////////
+                {
+
+                static inline ClassIsr* vectorTable_[VECTORS_SIZE];
+
+                virtual void
+isr             () = 0;
+
+public:
+
+                static auto
+setFunction     (MCU::IRQn n, ClassIsr* p)
+                { vectorTable_[16+n] = p; }
+
+                static auto
+func            ()
+                {
+                auto n = Scb::activeIrq();
+                auto objPtr = vectorTable_[16+n]; 
+                if( objPtr ) objPtr->isr();
+                }
+
+                };
+
+//........................................................................................
+
                 //matches what is in Startup.hpp
                 extern "C" vvfunc_t _sramvectors[VECTORS_SIZE];
 
@@ -263,10 +304,13 @@ public:
                 // no other options for enable/disable, but can do on your own
                 // these simply provide a function entry into the table, or remove it
 
+                //also can use a class isr, which will store a ClassIsr pointer to get
+                //to the class isr function
+
                 static auto
 setFunction     (MCU::IRQn n, vvfunc_t f, IRQ_PRIORITY pri = PRIORITY0)
                 {
-                CPU::_sramvectors[16+n] = f;
+                _sramvectors[16+n] = f;
                 priority( n, pri );
                 enableIrq(n);
                 }
@@ -276,7 +320,17 @@ deleteFunction  (MCU::IRQn n)
                 {
                 extern void errorFunc(); //default interrupt handler in startup
                 disableIrq(n);
-                CPU::_sramvectors[16+n] = errorFunc;
+                _sramvectors[16+n] = errorFunc;
+                ClassIsr::setFunction(n, 0);
+                }
+
+                static auto
+setFunction     (MCU::IRQn n, ClassIsr* p, IRQ_PRIORITY pri = PRIORITY0)
+                {
+                ClassIsr::setFunction(n, p);
+                _sramvectors[16+n] = ClassIsr::func;
+                priority( n, pri );
+                enableIrq(n);
                 }
 
                 static void
