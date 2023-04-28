@@ -3,6 +3,7 @@
 #include MY_MCU_HEADER
 #include <array>
 
+
 //........................................................................................
 
 ////////////////
@@ -11,21 +12,18 @@ Buffer
 ////////////////
                 {
 
-                u8* const   buf_;
-                u16 const   size_;
-                u8*         inPtr_;
-                u8*         outPtr_;
-                unsigned    count_{ 0 };    //count of unread data in the buffer
-                unsigned    maxcount_{ 0 }; //keep track of max buffer used
+                u8* const       buf_;
+                unsigned const  size_;
+                unsigned        inIdx_;
+                unsigned        outIdx_;
+                unsigned        count_{ 0 };    //count of unread data in the buffer
+                unsigned        maxcount_{ 0 }; //keep track of max buffer used
 
 public:
 
                 template<unsigned N>
 Buffer          (std::array<u8,N>& buf) 
-                : buf_{ buf.data() }, 
-                  size_{ N },
-                  inPtr_{ buf_ },
-                  outPtr_{ buf_ }
+                : buf_{ buf.data() }, size_{ N }, inIdx_{ 0 }, outIdx_{ 0 }
                 {}
 
                 bool
@@ -34,8 +32,8 @@ read            (u8& v)
                 InterruptLock lock;
                 if( count_ == 0 ) return false;
                 count_--;
-                v = *outPtr_++;
-                if( outPtr_ >= &buf_[size_] ) outPtr_ = buf_;
+                v = buf_[outIdx_++];
+                if( outIdx_ >= size_ ) outIdx_ = 0;
                 return true;
                 }
 
@@ -46,26 +44,22 @@ write           (u8 v)
                 if( count_ >= size_ ) return false;
                 count_++;
                 if( count_ > maxcount_ ) maxcount_ = count_;
-                *inPtr_++ = v;
-                if( inPtr_ >= &buf_[size_] ) inPtr_ = buf_;
+                buf_[inIdx_++] = v;
+                if( inIdx_ >= size_ ) inIdx_ = 0;
                 return true;
                 }
 
-                //reset the buffer
                 auto
-clear           () 
+flush           () 
                 {
                 InterruptLock lock;
-                count_ = 0;
-                maxcount_ = 0;
-                inPtr_ = buf_;
-                outPtr_ = buf_;
+                count_ = maxcount_ = inIdx_ = outIdx_ = 0;
                 }
 
                 auto  
-maxUsed         () { InterruptLock lock; return maxcount_; }
+maxUsed         () { return maxcount_; }
                 auto  
-sizeUsed        () { InterruptLock lock; return count_; }
+sizeUsed        () { return count_; }
                 auto  
 isFull          () { return sizeUsed() >= size_; }
                 auto    
