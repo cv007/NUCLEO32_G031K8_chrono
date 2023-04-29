@@ -24,6 +24,7 @@ public:
                     time_point runat;   //next run time
                     taskFunc_t func;    //function to call
                     duration interval;  //interval
+                    u32 id;             //task address
                     };
 private:
                 static inline Task tasks_[N]{};
@@ -94,6 +95,7 @@ insert          (taskFunc_t f, duration interval = std::chrono::milliseconds(0))
                     t.func = f;
                     t.interval = interval;
                     t.runat = Clock::now() + interval;
+                    t.id = reinterpret_cast<u32>(f);
                     return true;
                     }
                 return false;
@@ -110,6 +112,7 @@ insert          (taskFunc_t f, time_point tp)
                     t.func = f;
                     t.interval = 0;
                     t.runat = tp;
+                    t.id = reinterpret_cast<u32>(f);
                     return true;
                     }
                 return false;

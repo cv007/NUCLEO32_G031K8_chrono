@@ -84,7 +84,7 @@ public:
 
                 //allow direct access if needed (like if irq's are already off so do not
                 //want irq protection used)
-                type value{ 0 }; 
+                type value; 
 
 
 operator T      () const 
@@ -176,11 +176,11 @@ Scb
 ////////////////
                 {
 
-                struct ScbReg {
+                struct Reg {
                     u32 CPUID, ICSR, VTOR, AIRCR, SCR, CCR, unused1_, SHPR2, 
                     SHPR3, SHCSR, unused2_[2], DFSR;
                     };
-                static inline volatile ScbReg& scb_{ *reinterpret_cast<ScbReg*>(0xE000'ED00) };
+                static inline volatile Reg& scb_{ *reinterpret_cast<Reg*>(0xE000'ED00) };
 
                 enum { AIRCR_RESET_CODE = 0x05FA0004 };
                 enum { ICSR_PENDSTSETbm = 1<<26, ICSR_PENDSTCLRbm = 1<<25 };
@@ -267,12 +267,12 @@ Nvic
 ////////////////
                 {
 
-                struct NvicReg { 
+                struct Reg { 
                     u32 ISER, reserved0[31], ICER, reserved1[31], ISPR,
                     reserved2[31], ICPR, reserved3[31+64], IP[8]; 
                     };
 
-                static inline volatile NvicReg& nvic_{ *(reinterpret_cast<NvicReg*>(0xE000'E100)) };
+                static inline volatile Reg& nvic_{ *(reinterpret_cast<Reg*>(0xE000'E100)) };
 
 public:
 

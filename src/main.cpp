@@ -38,8 +38,7 @@
                 static bool
 printTask       (Task_t& task)
                 {
-                static const auto id{ reinterpret_cast<u32>(printTask) };
-                Uart* u = board.uart.take( id );
+                Uart* u = board.uart.take( task.id );
                 if( not u ) return false;
                 auto& uart = *u;
                 
@@ -49,37 +48,37 @@ printTask       (Task_t& task)
                 static u16 n = 0;
 
                 uart
-                    << fg(255,165,0) << now().time_since_epoch()
-                    << fg(50,90,150) << spacew(5) << n << space
+                    << fg(WHITE) << now().time_since_epoch() << space
+                    << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
+                    << fg(50,90,150) << dec << setwf(5,'_') << n << space
                     << fg(GREEN) << Hex0xpad(4) << n << space
                     << fg(GREEN_YELLOW) << bin0bpad(16) << n 
                     << endl << FMT::reset << normal;
 
                 n++;
-                board.uart.release( id );
+                board.uart.release( task.id );
                 return true;
                 } //printTask
 
 //........................................................................................
 
                 static bool
-printRandom     (Task_t&)
+printRandom     (Task_t& task)
                 {
-                static const auto id{ reinterpret_cast<u32>(printRandom) };
-
-                Uart* u = board.uart.take( id );
+                Uart* u = board.uart.take( task.id );
                 if( not u ) return false;
                 auto& uart = *u;
 
                 auto r = random.read();
 
                 uart
-                    << fg(255,50,0) << now().time_since_epoch()
-                    << fg(20,200,255) << " random " << bin0bpad(32) << r << space 
+                    << fg(WHITE) << now().time_since_epoch() << space
+                    << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
+                    << fg(20,200,255) << "random " << bin0bpad(32) << r << space 
                     << fg(20,255,200) << Hex0xpad(8) << r 
                     << endl << FMT::reset << normal;
 
-                board.uart.release( id );
+                board.uart.release( task.id );
                 return true;
                 } //printRandom
 
@@ -184,7 +183,7 @@ run             (SomeTasks* st)
                     auto dur = now().time_since_epoch();
 
                     uart
-                        << fg(color) << dur << " [" << Hex0xpad(8) << reinterpret_cast<u32>(this) << dec << "]["
+                        << fg(WHITE) << dur << fg(color) << " [" << Hex0xpad(8) << reinterpret_cast<u32>(this) << dec << "]["
                         << n << "][" << decpad(10) << runCount_ << "] ";
 
                     idx++;
@@ -244,13 +243,12 @@ runAll          (Task_t&)
                 static bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                static const auto id{ reinterpret_cast<u32>(showRandSeeds) };
-                Uart* u = board.uart.take( id );
+                Uart* u = board.uart.take( task.id );
                 if( not u ) return false; //keep trying
                 auto& uart = *u;
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
-                    board.uart.release( id ); //now release uart
+                    board.uart.release( task.id ); //now release uart
                     return true; //this task gets deleted
                     }
                 //intial interval of 0ms, print data
@@ -268,7 +266,7 @@ showRandSeeds   (Task_t& task)
                 void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                static const auto id{ reinterpret_cast<u32>(timePrintu32) };
+                static const auto id{ reinterpret_cast<u32>(timePrintu32) }; //create our own id
                 Uart* u = board.uart.take( id ); //if we are the only function in use, should not fail
                 if( not u ) return; 
                 auto& uart = *u;
