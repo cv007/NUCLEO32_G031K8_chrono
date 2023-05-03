@@ -145,7 +145,6 @@ print           (const float cf)
                     f = (f - fi) * pw;                      //f = desired fractional part moved up to integer
                     auto i = static_cast<u32>(f);           //i = integer part of desired fraction
                     f -= i;                                 //f now contains the remaining/unused fraction
-
                     if( (f >= 0.5) and (++i >= pw) ){       //if need to round up- inc i, check for overflow (the table value)
                         i = 0;                              //i overflow, set i to 0
                         fi++;                               //propogate into (original) integer part
@@ -272,6 +271,15 @@ operator <<     (PrintNull& p, T){ return p; }
                 //everything else pass to print() and let the Print class sort it out
                 template<typename T> Print&
                 operator << (Print& p, T t) { return p.print( t ); }
+
+                //also allow comma usage-
+                // uart, "123", setwf(10,''), 456, endl;
+                //simply 'convert' , usage to << usage
+                //note- remember to add operator , to any additional Print types created
+                //(see end of Systick class for example, where operator << is added and 
+                // operator , is also added)
+                template<typename T> Print&
+                operator , (Print& p, T t) { return p << t; }
 
                 //the functions which require a value will return
                 //a struct with a value or values which then gets used by <<
@@ -611,6 +619,17 @@ reset           };
                 static constexpr Rgb WHITE_SMOKE              { 245,245,245 };
                 static constexpr Rgb YELLOW                   { 255,255,0 };
                 static constexpr Rgb YELLOW_GREEN             { 154,205,50 };
+
+                // can adjust colors by multiplication (at compile time)
+                // no need to get more complicated with other operators as this is just
+                // a simple way to brighten/darken an existing named color
+                // WHITE * 0.5
+                static constexpr Rgb 
+operator *      (const Rgb& r, const double v)
+                {
+                return Rgb{ static_cast<u8>(r.r*v), static_cast<u8>(r.g*v), static_cast<u8>(r.b*v) };
+                }
+
                 } //namespace ANSI
 
                 } //namespace FMT

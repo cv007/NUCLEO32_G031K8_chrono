@@ -224,42 +224,56 @@ activeIrq       () { return MCU::IRQn( (scb_.ICSR bitand 0x3F) - 16 ); }
 
                 // interrupt-
                 //      address in vector table read (_sramvectors[n])
-                //      jump to address from vector table read, which is func()
-                //      func()- reads active irq number (IRQn type- -15 to 32)   
-                //      lookup ClassIsr pointer in vectorTable_, if not 0 call
+                //      jump to address from vector table read, which is dispatch()
+                //      dispatch()- reads active irq number (IRQn type- -15 to 32)   
+                //      lookup Isr pointer in objTable_, if not 0 call
                 //      isr virtual function
+
+                //matches what is in Startup.hpp
+                extern "C" vvfunc_t _sramvectors[VECTORS_SIZE];
 
 //////////////// CPU::
 class
-ClassIsr           
+Isr           
 ////////////////
                 {
 
-                static inline ClassIsr* vectorTable_[VECTORS_SIZE];
+                static inline Isr* objTable_[VECTORS_SIZE];
 
                 virtual void
 isr             () = 0;
 
-public:
-
-                static auto
-setFunction     (MCU::IRQn n, ClassIsr* p)
-                { vectorTable_[16+n] = p; }
-
-                static auto
-func            ()
+                static void
+dispatch        ()
                 {
                 auto n = Scb::activeIrq();
-                auto objPtr = vectorTable_[16+n]; 
+                auto objPtr = objTable_[16+n]; 
                 if( objPtr ) objPtr->isr();
                 }
 
-                };
+public:
+                //our static dispatch function into vector table
+                //Isr* into object table
+                static auto
+setFunction     (MCU::IRQn n, Isr* p)
+                { 
+                objTable_[16+n] = p; 
+                _sramvectors[16+n] = dispatch;
+                }
+
+                //function address into vector table
+                static auto
+setFunction     (MCU::IRQn n, vvfunc_t f)
+                {
+                _sramvectors[16+n] = f;
+                }
+
+                }; //Isr
 
 //........................................................................................
 
-                //matches what is in Startup.hpp
-                extern "C" vvfunc_t _sramvectors[VECTORS_SIZE];
+                // //matches what is in Startup.hpp
+                // extern "C" vvfunc_t _sramvectors[VECTORS_SIZE];
 
 //////////////// CPU::
 class
@@ -310,7 +324,7 @@ public:
                 static auto
 setFunction     (MCU::IRQn n, vvfunc_t f, IRQ_PRIORITY pri = PRIORITY0)
                 {
-                _sramvectors[16+n] = f;
+                Isr::setFunction(n, f);
                 priority( n, pri );
                 enableIrq(n);
                 }
@@ -320,15 +334,13 @@ deleteFunction  (MCU::IRQn n)
                 {
                 extern void errorFunc(); //default interrupt handler in startup
                 disableIrq(n);
-                _sramvectors[16+n] = errorFunc;
-                ClassIsr::setFunction(n, 0);
+                Isr::setFunction(n, errorFunc);
                 }
 
                 static auto
-setFunction     (MCU::IRQn n, ClassIsr* p, IRQ_PRIORITY pri = PRIORITY0)
-                {
-                ClassIsr::setFunction(n, p);
-                _sramvectors[16+n] = ClassIsr::func;
+setFunction     (MCU::IRQn n, Isr* p, IRQ_PRIORITY pri = PRIORITY0)
+                {                
+                Isr::setFunction(n, p);
                 priority( n, pri );
                 enableIrq(n);
                 }

@@ -198,4 +198,8 @@ operator<<      (FMT::Print& p, std::chrono::microseconds dur)
                         << setwf(6,'0') << us.count();                
                 }
 
+                inline FMT::Print&   
+operator,       (FMT::Print& p, std::chrono::microseconds dur){ return p << dur; }
+
+
 //........................................................................................

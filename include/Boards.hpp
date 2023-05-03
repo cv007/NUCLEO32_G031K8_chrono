@@ -26,8 +26,9 @@ Nucleo32g031
 
 private:        //not directly accessible
 
-                //Uart2, TX=PA2,RX=PA3                
+                //uart buffer
                 std::array<u8,256> uartBuffer_;
+                //Uart2, TX=PA2,RX=PA3 
                 Uart uart_{ MCU::Uart2_A2A3, 1'000'000, uartBuffer_, Nvic::PRIORITY2 };
 
                 //the uart is available for a new owner when the uart goes idle (buffer
@@ -38,12 +39,12 @@ private:        //not directly accessible
                 //message
 
                 //uart_ (the real Uart class) only accessible via Ownership class (uart)
-                //      auto byMe{ reinterpret_cast<u32>(myFuncName) }; //create a unique id
-                //      Uart* u = board.uart.take( byMe ); //try to get a pointer to the uart
+                //      auto id{ reinterpret_cast<u32>(myFuncName) }; //create a unique id
+                //      Uart* u = board.uart.take( id ); //try to get a pointer to the uart
                 //      if( not u ) return false; //null pointer returned, not available
                 //      auto& uart = *u; //we are the owner, convert to reference for easier use
                 //      uart << "Hello World" << endl; //use
-                //      board.uart.release( byMe ); //release ownership
+                //      board.uart.release( id ); //release ownership
 public:
                 Ownership<Uart> uart{ uart_ };
                

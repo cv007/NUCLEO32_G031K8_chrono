@@ -15,16 +15,16 @@ Tasks
 ////////////////
                 {
 public:
-                struct Task;
+                struct Task; //declare, since we need to refer to inside struct
                 using taskFunc_t = bool(*)(Task&);
                 using duration = typename Clock::duration;
                 using time_point = typename Clock::time_point;
 
                 struct Task {
-                    time_point runat;   //next run time
-                    taskFunc_t func;    //function to call
-                    duration interval;  //interval
-                    u32 id;             //task address
+                    time_point  runat;      //next run time
+                    taskFunc_t  func;       //function to call
+                    duration    interval;   //interval
+                    u32         id;         //a unique id (from function address, should be unique)
                     };
 private:
                 static inline Task tasks_[N]{};

@@ -15,7 +15,7 @@ class
 Uart            
 ////////////////
                 : public FMT::Print, 
-                  public CPU::ClassIsr
+                  public CPU::Isr
                 {
 
                 struct Reg { u32 CR1, CR2, CR3, BRR, GTPR, RTOR, RQR, ISR, ICR, RDR, 

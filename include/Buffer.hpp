@@ -6,6 +6,16 @@
 
 //........................................................................................
 
+                // the Buffer class only deals with a u8 buffer created outside this
+                // class- there is no memory allocation done here
+
+                // first create your buffer-
+                // std::array<u8,128> buf;
+                // then use the reference to creat a Buffer instance-
+                // Buffer mybuffer{ buf };
+                // and use as needed-
+                // auto ret = myBuffer.write(1); //true=written, false=full
+
 ////////////////
 class
 Buffer            

@@ -10,7 +10,7 @@
 class
 LptimClockLSI        
 ////////////////
-                : public CPU::ClassIsr
+                : public CPU::Isr
                 {
 
                 //default Systick irq priority if not specified, lowest priority
@@ -65,7 +65,7 @@ count           ()
 lsiCycles       ()
                 {
                 InterruptLock lock;             //simpler to just protect the whole function
-                auto counter = count();          //hardware. always changing
+                auto counter = count();         //hardware. always changing
                 //since irq's are aready off, skip the protection for atom_lsiCyclesTotal_
                 //which is AtomRW type
                 auto total = atom_lsiCyclesTotal_.value; //irq's are off, not changing

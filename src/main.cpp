@@ -39,21 +39,31 @@
 printTask       (Task_t& task)
                 {
                 Uart* u = board.uart.take( task.id );
-                if( not u ) return false;
+                if( not u ) return false; //false=try again
                 auto& uart = *u;
                 
                 auto ti = task.interval + milliseconds(20);
                 if( ti > milliseconds(600) ) ti = milliseconds(400);
-                task.interval = ti;
+                task.interval = ti; //set new interval
                 static u16 n = 0;
 
-                uart
-                    << fg(WHITE) << now().time_since_epoch() << space
-                    << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
-                    << fg(50,90,150) << dec << setwf(5,'_') << n << space
-                    << fg(GREEN) << Hex0xpad(4) << n << space
-                    << fg(GREEN_YELLOW) << bin0bpad(16) << n 
-                    << endl << FMT::reset << normal;
+                // << style
+                // uart
+                //     << fg(WHITE) << now().time_since_epoch() << space
+                //     << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
+                //     << fg(50,90,150) << dec << setwf(5,'_') << n << space
+                //     << fg(GREEN) << Hex0xpad(4) << n << space
+                //     << fg(GREEN_YELLOW) << bin0bpad(16) << n 
+                //     << endl << FMT::reset << normal;
+
+                // , style
+                uart,
+                fg(WHITE*0.4), now().time_since_epoch(), space,
+                fg(WHITE*0.4), "[", Hex0xpad(8), task.id, "] ",
+                fg(50,90,150), dec, setwf(5,'_'), n, space,
+                fg(GREEN*1.5), Hex0xpad(4), n, space,
+                fg(GREEN_YELLOW), bin0bpad(16), n,
+                endl, FMT::reset, normal;
 
                 n++;
                 board.uart.release( task.id );
@@ -71,12 +81,19 @@ printRandom     (Task_t& task)
 
                 auto r = random.read();
 
-                uart
-                    << fg(WHITE) << now().time_since_epoch() << space
-                    << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
-                    << fg(20,200,255) << "random " << bin0bpad(32) << r << space 
-                    << fg(20,255,200) << Hex0xpad(8) << r 
-                    << endl << FMT::reset << normal;
+                // uart
+                //     << fg(WHITE) << now().time_since_epoch() << space
+                //     << fg(WHITE) << "[" << Hex0xpad(8) << task.id << "] "
+                //     << fg(20,200,255) << "random " << bin0bpad(32) << r << space 
+                //     << fg(20,255,200) << Hex0xpad(8) << r 
+                //     << endl << FMT::reset << normal;
+
+                uart,
+                fg(WHITE), now().time_since_epoch(), space,
+                fg(WHITE), "[", Hex0xpad(8), task.id, "] ",
+                fg(20,200,255), "random ", bin0bpad(32), r, space,
+                fg(20,255,200), Hex0xpad(8), r, 
+                endl, FMT::reset, normal;
 
                 board.uart.release( task.id );
                 return true;
@@ -182,9 +199,14 @@ run             (SomeTasks* st)
                                static_cast<u8>(n*30) };
                     auto dur = now().time_since_epoch();
 
-                    uart
-                        << fg(WHITE) << dur << fg(color) << " [" << Hex0xpad(8) << reinterpret_cast<u32>(this) << dec << "]["
-                        << n << "][" << decpad(10) << runCount_ << "] ";
+                    // uart
+                    //     << fg(WHITE) << dur << fg(color) << " [" << Hex0xpad(8) << reinterpret_cast<u32>(this) << dec << "]["
+                    //     << n << "][" << decpad(10) << runCount_ << "] ";
+
+                    uart,
+                    fg(WHITE), dur, fg(color), 
+                    " [", Hex0xpad(8), reinterpret_cast<u32>(this), dec, "][",
+                    n, "][", decpad(10), runCount_, "] ";
 
                     idx++;
                     return false;
@@ -252,10 +274,17 @@ showRandSeeds   (Task_t& task)
                     return true; //this task gets deleted
                     }
                 //intial interval of 0ms, print data
-                uart << normal << endl 
-                     << "   seed0: " << Hex0xpad(8) << random.seed0() << endl
-                     << "   seed1: " << Hex0xpad(8) << random.seed1() << endl 
-                     << endl << dec;
+                // uart << normal << endl 
+                //      << "   seed0: " << Hex0xpad(8) << random.seed0() << endl
+                //      << "   seed1: " << Hex0xpad(8) << random.seed1() << endl 
+                //      << endl << dec;
+
+                uart,
+                normal, endl,
+                "   seed0: ", Hex0xpad(8), random.seed0(), endl,
+                "   seed1: ", Hex0xpad(8), random.seed1(), endl, 
+                endl, dec;
+
                 //hold uart for 5s so we can view
                 task.interval = 5s;
                 return true;
