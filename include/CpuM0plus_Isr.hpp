@@ -3,7 +3,7 @@
 #include "NiceTypes.hpp"
 #include "CpuM0plus_Scb.hpp"
 
-//uses MCU::IRQn, VECTORS_SIZE
+//uses MCU::IRQn, VECTORS_SIZE, Scb
 
 
 //........................................................................................
@@ -61,6 +61,8 @@ setFunction     (MCU::IRQn n, Isr* p)
                 }
 
                 //function address into vector table
+                //used for static functions, which can be called directly
+                //via existing ram vectors
                 static auto
 setFunction     (MCU::IRQn n, vvfunc_t f)
                 {
