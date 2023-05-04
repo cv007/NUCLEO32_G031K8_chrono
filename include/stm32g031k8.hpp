@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Util.hpp"
+
 
 //........................................................................................
 
@@ -55,7 +57,7 @@ ALTFUNC         { AF0, AF1, AF2, AF4 = 4, AF5, AF6, AF7 };
 
 
                 enum
-IRQn            { SYSTICK_IRQ = -1, USART1_IRQ = 27, USART2_IRQ, LPTIM1_IRQ = 17, LPTIM2_IRQ };
+IRQn            : int { SYSTICK_IRQ = -1, USART1_IRQ = 27, USART2_IRQ, LPTIM1_IRQ = 17, LPTIM2_IRQ };
 
 
                 //used by Uart class
@@ -72,12 +74,12 @@ uart_t          = struct {
 
                 static constexpr uart_t
 Uart2_A2A3      { //Uart2, TX=PA2,RX=PA3
-                USART2_BASE,    //Usart2 base address
-                PA2, AF1,       //tx pin, alt function
-                PA3, AF1,       //rx pin, alt function
-                []{ vu32Ref(RCC_APBENR1) = vu32Ref(RCC_APBENR1) bitor RCC_USART2ENbm; }, //init rcc
-                USART2_IRQ      //IRQn
-                };
+                    USART2_BASE,    //Usart2 base address
+                    PA2, AF1,       //tx pin, alt function
+                    PA3, AF1,       //rx pin, alt function
+                    []{ vu32Ref(RCC_APBENR1) = vu32Ref(RCC_APBENR1) bitor RCC_USART2ENbm; }, //init rcc
+                    USART2_IRQ      //IRQn
+                    };
                
 
                 using 
@@ -89,36 +91,36 @@ lptim_t         = struct {
 
                 static constexpr lptim_t
 Lptim1LSI       { 
-                LPTIM1_BASE,
-                []{ //init
-                    vu32Ref(RCC_CSR) = LSIONbm;
-                    vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM1ENbm;
-                    vu32Ref(MCU::RCC_CCIPR) = 
-                        (vu32Ref(MCU::RCC_CCIPR) 
-                        bitand compl (LPTIMSELbm<<LPTIM1SELbp)) 
-                        bitor 1<<LPTIM1SELbp;
-                    }, 
-                LPTIM1_IRQ
-                };
+                    LPTIM1_BASE,
+                    []{ //init
+                        vu32Ref(RCC_CSR) = LSIONbm;
+                        vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM1ENbm;
+                        vu32Ref(MCU::RCC_CCIPR) = 
+                            (vu32Ref(MCU::RCC_CCIPR) 
+                            bitand compl (LPTIMSELbm<<LPTIM1SELbp)) 
+                            bitor 1<<LPTIM1SELbp;
+                        }, 
+                    LPTIM1_IRQ
+                    };
 
                 static constexpr lptim_t
 Lptim2LSI       { 
-                LPTIM2_BASE,
-                []{ //init
-                    vu32Ref(RCC_CSR) = LSIONbm;
-                    vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM2ENbm;
-                    vu32Ref(MCU::RCC_CCIPR) = 
-                        (vu32Ref(MCU::RCC_CCIPR) 
-                        bitand compl (LPTIMSELbm<<LPTIM2SELbp)) 
-                        bitor 1<<LPTIM2SELbp;
-                    }, 
-                LPTIM2_IRQ
-                };
+                    LPTIM2_BASE,
+                    []{ //init
+                        vu32Ref(RCC_CSR) = LSIONbm;
+                        vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM2ENbm;
+                        vu32Ref(MCU::RCC_CCIPR) = 
+                            (vu32Ref(MCU::RCC_CCIPR) 
+                            bitand compl (LPTIMSELbm<<LPTIM2SELbp)) 
+                            bitor 1<<LPTIM2SELbp;
+                        }, 
+                    LPTIM2_IRQ
+                    };
 
                 } //MCU
 
 //........................................................................................
 
-                #include "CpuM0plus.hpp"
+#include "CpuM0plus.hpp"
 
 //........................................................................................

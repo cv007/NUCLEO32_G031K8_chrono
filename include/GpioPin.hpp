@@ -1,6 +1,8 @@
 #pragma once
+
 #include "Util.hpp"
 #include MY_MCU_HEADER
+
 
 //........................................................................................
 
@@ -11,12 +13,12 @@ GpioPin
                 {
 
                 struct Reg { 
-                    CPU::AtomRW<volatile u32> atom_MODER, atom_OTYPER, atom_OSPEEDR, atom_PUPDR;
+                    CPU::AtomRW<u32> atom_MODER, atom_OTYPER, atom_OSPEEDR, atom_PUPDR;
                     volatile u32 IDR;
                     volatile u32 ODR;
                     volatile u32 BSRR;
-                    CPU::AtomRW<volatile u32> atom_LCKR;
-                    CPU::AtomRW<volatile u64> atom_AFR;
+                    CPU::AtomRW<u32> atom_LCKR;
+                    CPU::AtomRW<u64> atom_AFR;
                     volatile u32 BRR; 
                     };
 
@@ -26,8 +28,9 @@ GpioPin
                 Reg&        reg_;       //register struct access
 
                 //rcc io enable register, same for all instances so static
-                static inline CPU::AtomRW<volatile u32>& atom_rccEn_{ 
-                    *(reinterpret_cast<CPU::AtomRW<volatile u32>*>(MCU::RCC_IOPENR)) };
+                static inline auto& atom_rccEn_{ 
+                    *( reinterpret_cast<CPU::AtomRW<u32>*>(MCU::RCC_IOPENR) ) 
+                    };
 
 public:
 

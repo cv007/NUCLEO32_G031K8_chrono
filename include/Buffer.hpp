@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Util.hpp"
 #include MY_MCU_HEADER
 #include <array>
@@ -22,40 +23,40 @@ Buffer
 ////////////////
                 {
 
-                u8* const       buf_;
-                unsigned const  size_;
-                unsigned        inIdx_;
-                unsigned        outIdx_;
-                unsigned        count_{ 0 };    //count of unread data in the buffer
-                unsigned        maxcount_{ 0 }; //keep track of max buffer used
+                u8* const           mbuf;
+                unsigned const      msize;
+                unsigned            minIdx;
+                unsigned            moutIdx;
+                volatile unsigned   mcount{ 0 };    //count of unread data in the buffer
+                unsigned            mmaxCount{ 0 }; //keep track of max buffer used
 
 public:
 
                 template<unsigned N>
 Buffer          (std::array<u8,N>& buf) 
-                : buf_{ buf.data() }, size_{ N }, inIdx_{ 0 }, outIdx_{ 0 }
+                : mbuf{ buf.data() }, msize{ N }, minIdx{ 0 }, moutIdx{ 0 }
                 {}
 
                 bool
 read            (u8& v)
                 {
+                if( mcount == 0 ) return false;
+                v = mbuf[moutIdx++];
+                if( moutIdx >= msize ) moutIdx = 0;
                 InterruptLock lock;
-                if( count_ == 0 ) return false;
-                count_--;
-                v = buf_[outIdx_++];
-                if( outIdx_ >= size_ ) outIdx_ = 0;
+                mcount--;
                 return true;
                 }
 
                 bool
 write           (u8 v)
                 {
+                if( mcount >= msize ) return false;
+                if( mcount > mmaxCount ) mmaxCount = mcount;
+                mbuf[minIdx++] = v;
+                if( minIdx >= msize ) minIdx = 0;
                 InterruptLock lock;
-                if( count_ >= size_ ) return false;
-                count_++;
-                if( count_ > maxcount_ ) maxcount_ = count_;
-                buf_[inIdx_++] = v;
-                if( inIdx_ >= size_ ) inIdx_ = 0;
+                mcount++;
                 return true;
                 }
 
@@ -63,21 +64,21 @@ write           (u8 v)
 flush           () 
                 {
                 InterruptLock lock;
-                count_ = maxcount_ = inIdx_ = outIdx_ = 0;
+                mcount = mmaxCount = minIdx = moutIdx = 0;
                 }
 
                 auto  
-maxUsed         () { return maxcount_; }
+maxUsed         () { return mmaxCount; }
                 auto  
-sizeUsed        () { return count_; }
+sizeUsed        () { return mcount; }
                 auto  
-isFull          () { return sizeUsed() >= size_; }
+isFull          () { return sizeUsed() >= msize; }
                 auto    
 isEmpty         () { return sizeUsed() == 0; }
                 auto  
-sizeFree        () { return size_ - sizeUsed(); }
+sizeFree        () { return msize - sizeUsed(); }
                 auto  
-sizeMax         () { return size_; }
+sizeMax         () { return msize; }
 
                 }; //Buffer
 

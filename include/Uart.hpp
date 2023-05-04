@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Util.hpp"
 #include "Print.hpp"
 #include "GpioPin.hpp"
@@ -118,6 +119,6 @@ Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ
                 txOn();
                 }
 
-                };
+                }; //Uart
 
 //........................................................................................

@@ -1,6 +1,6 @@
 //-Os -mcpu=cortex-m0plus -std=c++17 -Wall -Wextra -Wpedantic
 //........................................................................................
-
+#if 1
 ////////////////
 // main.cpp
 ////////////////
@@ -349,4 +349,13 @@ main            ()
                 } //main
 
 
+#endif
 
+#if 0
+#include "GpioPin.hpp"
+GpioPin debugPin = GpioPin( MCU::PA15 );
+
+int main(){
+    while(1){}
+}
+#endif

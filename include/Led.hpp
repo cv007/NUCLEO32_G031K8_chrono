@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Util.hpp"
 #include "GpioPin.hpp"
 #include "Systick.hpp"
@@ -27,7 +28,7 @@ Led             (MCU::PIN pin, INVERT inv = HIGHISON)
                 using 
 GpioPin::on,    
 GpioPin::off, 
-GpioPin::toggle,                 
+GpioPin::toggle,
 GpioPin::isOn, 
 GpioPin::isOff;
 

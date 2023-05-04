@@ -1,6 +1,8 @@
 #pragma once
+
 #include "Util.hpp"
 #include MY_MCU_HEADER
+
 
 //........................................................................................
 
@@ -18,7 +20,6 @@ System
 cpuHz           (u32 hz){ cpuHz_ = hz; }
 
 public:
-
                 //led info codes
                 enum 
 INFO_CODES      { BOOT_CODE = 22 };
@@ -26,8 +27,6 @@ INFO_CODES      { BOOT_CODE = 22 };
                 static auto
 cpuHz           (){ return cpuHz_; }
 
-
-
-                };
+                }; //System
 
 //........................................................................................

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Util.hpp"
 #include MY_MCU_HEADER
 #include "GpioPin.hpp"
@@ -17,6 +18,7 @@ Boards
 ////////////////
                 {
 
+//........................................................................................
 
 ////////////////
 struct 
@@ -67,6 +69,8 @@ public:
                 GpioPin debugPin = GpioPin( D[2] ).mode( GpioPin::OUTPUT );
 
                 }; //Nucleo32g031
+
+//........................................................................................
 
                 }; //Boards
 

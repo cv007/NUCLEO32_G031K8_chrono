@@ -1,6 +1,6 @@
 #pragma once
+
 #include "Startup.hpp" //linker symbols for stack
-#include "NiceTypes.hpp"
 #include <random>
 #include <type_traits>
 
@@ -25,7 +25,6 @@ RandomGenLFSR16
                 static constexpr u32 POLY_MASK31 { 0x7A5BC2E3 };
 
 public:
-
                 //initial seed values from unitialized ram
                 //whether power on or reboot, these values will be unpredictable
 RandomGenLFSR16 ()
@@ -111,7 +110,7 @@ read            (T min = 0, T max = sizeof(T) == 1 ? 0xFF : sizeof(T) == 2 ? 0xF
                 // return dist_( rg_ );
                 }
 
-                }; //Random0
+                }; //Random
 
 //........................................................................................
 

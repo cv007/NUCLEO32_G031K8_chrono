@@ -51,6 +51,7 @@ CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += -fmodules-ts
 CXXFLAGS += -fno-rtti
+CXXFLAGS += -Wno-volatile #get rid of volatile warnings for c++20
 
 # linker flags
 LDFLAGS := -T$(LSCRIPT)

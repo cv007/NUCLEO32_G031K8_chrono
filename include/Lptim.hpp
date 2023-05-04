@@ -1,16 +1,17 @@
 #pragma once
+
 #include "Util.hpp"
 #include "System.hpp"
 #include <chrono>
 #include MY_MCU_HEADER
 
+
 //........................................................................................
 
 ////////////////
 class
-LptimClockLSI        
+LptimClockLSI   : public CPU::Isr    
 ////////////////
-                : public CPU::Isr
                 {
 
                 //default Systick irq priority if not specified, lowest priority
@@ -130,3 +131,5 @@ delay           (duration d)
                 }
 
                 }; // LptimClockLSI
+
+//........................................................................................

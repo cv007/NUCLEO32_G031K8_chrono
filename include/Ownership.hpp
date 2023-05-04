@@ -1,17 +1,18 @@
 #pragma once
+
 #include "NiceTypes.hpp"
 #include MY_MCU_HEADER //InterruptLock
+
 
 //........................................................................................
 
 ////////////////
-template <
-typename T      //device (device requires an isIdle() function- returns true when its 
->               //ready to take on a new owner, or simply returns true if not necessary
+template
+<typename T>    //device (device requires an isIdle() function- returns true when its 
+                //ready to take on a new owner, or simply returns true if not necessary
 class
 Ownership
 ////////////////
-
                 {           
 
                 u32 owner_; //unique id (like function address)

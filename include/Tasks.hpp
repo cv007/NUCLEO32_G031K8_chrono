@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Util.hpp"
 #include <chrono>
 
@@ -6,10 +7,8 @@
 //........................................................................................
 
 ////////////////
-template <
-typename Clock, //a chrono compatible clock
-int N           //task list array size    
->                                      
+template
+<typename Clock, int N> //Clock = a chrono compatible clock, N = task list array size                               
 class
 Tasks           
 ////////////////

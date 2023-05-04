@@ -1,4 +1,5 @@
 #pragma once
+
 #include "NiceTypes.hpp"
 
 
@@ -25,6 +26,7 @@ arraySize       (const T(&t)[N]){ (void)t; return N; }
 
                 } //UTIL
 
+//........................................................................................
 
                 //optional- bring into global namespace
                 using namespace UTIL;
