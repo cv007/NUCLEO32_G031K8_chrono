@@ -23,40 +23,41 @@ Buffer
 ////////////////
                 {
 
-                u8* const           mbuf;
-                unsigned const      msize;
-                unsigned            minIdx;
-                unsigned            moutIdx;
-                volatile unsigned   mcount{ 0 };    //count of unread data in the buffer
-                unsigned            mmaxCount{ 0 }; //keep track of max buffer used
+                u8* const           buf_;
+                u32 const           size_;
+
+                u32                 wrIdx_;
+                u32                 rdIdx_;
+                CPU::AtomRW<u32>    count_;    //count of unread data in the buffer
+                u32                 maxCount_; //keep track of max buffer used
 
 public:
 
                 template<unsigned N>
 Buffer          (std::array<u8,N>& buf) 
-                : mbuf{ buf.data() }, msize{ N }, minIdx{ 0 }, moutIdx{ 0 }
-                {}
+                : buf_{ buf.data() }, size_{ N }
+                {
+                flush();
+                }
 
                 bool
 read            (u8& v)
                 {
-                if( mcount == 0 ) return false;
-                v = mbuf[moutIdx++];
-                if( moutIdx >= msize ) moutIdx = 0;
-                InterruptLock lock;
-                mcount--;
+                if( count_ == 0 ) return false;
+                v = buf_[rdIdx_++];
+                if( rdIdx_ >= size_ ) rdIdx_ = 0;
+                count_--;
                 return true;
                 }
 
                 bool
 write           (u8 v)
                 {
-                if( mcount >= msize ) return false;
-                if( mcount > mmaxCount ) mmaxCount = mcount;
-                mbuf[minIdx++] = v;
-                if( minIdx >= msize ) minIdx = 0;
-                InterruptLock lock;
-                mcount++;
+                if( count_ >= size_ ) return false;
+                if( count_ > maxCount_ ) maxCount_ = count_;
+                buf_[wrIdx_++] = v;
+                if( wrIdx_ >= size_ ) wrIdx_ = 0;
+                count_++;
                 return true;
                 }
 
@@ -64,21 +65,22 @@ write           (u8 v)
 flush           () 
                 {
                 InterruptLock lock;
-                mcount = mmaxCount = minIdx = moutIdx = 0;
+                //use count_.value directly to bypass atomic since we take care of it here
+                count_.value = maxCount_ = wrIdx_ = rdIdx_ = 0; 
                 }
 
                 auto  
-maxUsed         () { return mmaxCount; }
+maxUsed         () { return maxCount_; }
                 auto  
-sizeUsed        () { return mcount; }
+sizeUsed        () { return count_; }
                 auto  
-isFull          () { return sizeUsed() >= msize; }
+isFull          () { return sizeUsed() >= size_; }
                 auto    
 isEmpty         () { return sizeUsed() == 0; }
                 auto  
-sizeFree        () { return msize - sizeUsed(); }
+sizeFree        () { return size_ - sizeUsed(); }
                 auto  
-sizeMax         () { return msize; }
+sizeMax         () { return size_; }
 
                 }; //Buffer
 
