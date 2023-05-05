@@ -5,7 +5,7 @@
 #include "GpioPin.hpp"
 #include "System.hpp"
 #include <array>
-#include "Buffer.hpp"
+#include "BufferBytes.hpp"
 #include MY_MCU_HEADER
 
 
@@ -23,7 +23,7 @@ Uart
                              TDR, PRESC; };
                 
                 volatile Reg&       reg_;
-                Buffer              buffer_;
+                BufferBytes         buffer_;
                 Nvic::IRQ_PRIORITY  irqPriorty_;
                 MCU::IRQn           irqn_;
 
