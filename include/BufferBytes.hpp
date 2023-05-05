@@ -26,10 +26,10 @@ BufferBytes
                 u8* const           buf_;
                 u32 const           size_;
 
-                u32                 wrIdx_;
-                u32                 rdIdx_;
-                CPU::AtomRW<u32>    count_;    //count of unread data in the buffer
-                u32                 maxCount_; //keep track of max buffer used
+                u32                 wrIdx_{0};
+                u32                 rdIdx_{0};
+                CPU::AtomRW<u32>    atom_count_{0}; //count of unread data in the buffer
+                u32                 maxCount_{0};   //keep track of max buffer used
 
 public:
 
@@ -37,27 +37,26 @@ public:
 BufferBytes     (std::array<u8,N>& buf) 
                 : buf_{ buf.data() }, size_{ N }
                 {
-                flush();
                 }
 
                 bool
 read            (u8& v)
                 {
-                if( count_ == 0 ) return false;
+                if( atom_count_ == 0 ) return false;
                 v = buf_[rdIdx_++];
                 if( rdIdx_ >= size_ ) rdIdx_ = 0;
-                count_--;
+                atom_count_--;
                 return true;
                 }
 
                 bool
 write           (u8 v)
                 {
-                if( count_ >= size_ ) return false;
-                if( count_ > maxCount_ ) maxCount_ = count_;
+                if( atom_count_ >= size_ ) return false;
+                if( atom_count_ > maxCount_ ) maxCount_ = atom_count_;
                 buf_[wrIdx_++] = v;
                 if( wrIdx_ >= size_ ) wrIdx_ = 0;
-                count_++;
+                atom_count_++;
                 return true;
                 }
 
@@ -65,14 +64,14 @@ write           (u8 v)
 flush           () 
                 {
                 InterruptLock lock;
-                //use count_.value directly to bypass atomic since we take care of it here
-                count_.value = maxCount_ = wrIdx_ = rdIdx_ = 0; 
+                //use atom_count_.value directly to bypass atomic since we take care of it here
+                atom_count_.value = maxCount_ = wrIdx_ = rdIdx_ = 0; 
                 }
 
                 auto  
 maxUsed         () { return maxCount_; }
                 auto  
-sizeUsed        () { return count_; }
+sizeUsed        () { return atom_count_; }
                 auto  
 isFull          () { return sizeUsed() >= size_; }
                 auto    

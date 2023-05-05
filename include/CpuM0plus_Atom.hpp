@@ -15,10 +15,14 @@ CPU
 
 //........................................................................................
 
-                // AtomRW<u32> mySharedVar;
-                // mySharedVar++; //atomic
-                // AtomRW<u32> someRegister;
-                // someRegister or_eq 1; //atomic
+                // prepending atom_ to var names to indicate var is atomic
+                // mainly to prevent double protecting because you may forget
+                // the var was declared as Atom* type
+                //
+                // AtomRW<u32> atom_mySharedVar;
+                // atom_mySharedVar++; //atomic
+                // AtomRW<u32> atom_someRegister;
+                // atom_someRegister or_eq 1; //atomic
 
 ////////////////
 template
