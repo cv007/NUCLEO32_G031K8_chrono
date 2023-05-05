@@ -7,7 +7,7 @@
 The interrupt rate is 1ms for callback duties (tasks) but can be changed as needed. As a chrono clock its resolution is 1us and does not depend on the interrupt rate.
 
 
-The Makefile assumes the folders obj and bin exist, so initially creat these folders. Also, the gcc toolchain from Arm needs to be extracted somewhere, and the toolchain vars in the Makefile will need to be appropriate to its location. My toolchain was extracted in the same folder as the project and the Makefile will reflect that.
+The Makefile assumes the folders obj and bin exist, so initially create these folders. Also, the gcc toolchain from Arm needs to be extracted somewhere, and the toolchain vars in the Makefile will need to be appropriate to its location. My toolchain was extracted in the same folder as the project and the Makefile will reflect that.
 
 my folder structure -\
 \
@@ -17,3 +17,6 @@ my folder structure -\
 &nbsp;&nbsp;&nbsp;&nbsp;obj\
 &nbsp;&nbsp;&nbsp;&nbsp;bin\
 &nbsp;&nbsp;&nbsp;&nbsp;arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi
+
+
+If using Windows- the toolchain base folder name will be different than the Linux version. For Windows, an easy way to get 'make' and shell support is to get a copy of busybox for Windows.
