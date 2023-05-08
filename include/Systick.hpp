@@ -39,11 +39,11 @@ Systick
                 enum { CVR_MASK = 0xFFFFFF };
 
                 //private vars
-                static inline CPU::AtomRW<volatile i64> atom_cpuCyclesTotal_;
-                static inline volatile bool             wasIrq_; //can see if was cause of wakeup
-                static inline u32                       cyclesPerIrq_;
-                static inline u32                       cpuHz_;
-                static inline u32                       shift1us_; //bit shift for cycles to 1us
+                static inline CPU::Atom<i64>    atom_cpuCyclesTotal_;
+                static inline volatile bool     wasIrq_; //can see if was cause of wakeup
+                static inline u32               cyclesPerIrq_;
+                static inline u32               cpuHz_;
+                static inline u32               shift1us_; //bit shift for cycles to 1us
                 
 
                 static auto

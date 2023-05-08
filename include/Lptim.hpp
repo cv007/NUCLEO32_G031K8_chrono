@@ -36,7 +36,7 @@ LptimClockLSI   : public CPU::Isr
                 volatile Reg&               reg_;
                 Nvic::IRQ_PRIORITY          irqPriority_;
                 MCU::IRQn                   irqn_;
-                CPU::AtomRW<volatile i64>   atom_lsiCyclesTotal_;
+                CPU::Atom<i64>              atom_lsiCyclesTotal_;
 
                 //consts
                 static constexpr auto lsiHz_{ 32768 };  

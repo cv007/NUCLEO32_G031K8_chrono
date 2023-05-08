@@ -17,18 +17,19 @@ CPU
 
                 // prepending atom_ to var names to indicate var is atomic
                 // mainly to prevent double protecting because you may forget
-                // the var was declared as Atom* type
+                // the var was declared as AtomRW type
                 //
                 // AtomRW<u32> atom_mySharedVar;
                 // atom_mySharedVar++; //atomic
-                // AtomRW<u32> atom_someRegister;
-                // atom_someRegister or_eq 1; //atomic
+                // struct Reg { AtomRW<u32> atom_CTRLA; };
+                // Reg& reg{ *reinterpret_cast<Reg*>(0x40001000) };
+                // reg.atom_CTRLA or_eq 1; //atomic
 
 ////////////////
 template
 <typename T>
 class 
-AtomRW          
+Atom          
 ////////////////
                 {
 
@@ -36,44 +37,48 @@ AtomRW
 
 public:
 
-                static constexpr auto is_mcu_atomic_read{ alignof(T) <= 4 }; //mcu specific
+                static constexpr auto is_cpu_atomic_read{ alignof(T) <= 4 }; //cpu specific
 
                 //allow direct access if needed (like if irq's are already off so do not
                 //want irq protection used)
-                //make T volatile if not already (otherwise no need to protect)
+                //make T volatile if not already (otherwise no need to interrupt protect)
                 volatile T value; 
 
 
+                //read
 operator T      () const 
                 {
-                if constexpr( is_mcu_atomic_read ) return value;
+                if constexpr( is_cpu_atomic_read ) return value;
                 InterruptLock lock; //64bits, so protect read
                 return value; 
                 }  
 
+                //write (assignment)
                 T    
 operator =      (const T v) 
                 {
-                if constexpr( is_mcu_atomic_read ) return value = v;
+                if constexpr( is_cpu_atomic_read ) return value = v;
                 InterruptLock lock;
                 return value = v; 
                 }  
 
-              //T       operator &      () const    { return &value; }   
-                T       operator ++     (const int) { InterruptLock lock; return value = value + 1;  }
-                T       operator --     (const int) { InterruptLock lock; return value = value - 1;  }
-                T       operator +=     (const T v) { InterruptLock lock; return value = value + v;  }
-                T       operator -=     (const T v) { InterruptLock lock; return value = value - v;  }
-                T       operator ++     ()          { InterruptLock lock; return value = value + 1;  }
-                T       operator --     ()          { InterruptLock lock; return value = value - 1;  }
-                T       operator *=     (const T v) { InterruptLock lock; return value = value * v;  }
-                T       operator /=     (const T v) { InterruptLock lock; return value = value / v;  }
-                T       operator %=     (const T v) { InterruptLock lock; return value = value % v;  }
-                T       operator ^=     (const T v) { InterruptLock lock; return value = value ^ v;  }
-                T       operator &=     (const T v) { InterruptLock lock; return value = value & v;  }
-                T       operator |=     (const T v) { InterruptLock lock; return value = value | v;  }
-                T       operator >>=    (const T v) { InterruptLock lock; return value = value >> v; }
-                T       operator <<=    (const T v) { InterruptLock lock; return value = value << v; }
+                //prefix ++ / --
+                T       operator ++     ()          { InterruptLock lock; return ++value;    }
+                T       operator --     ()          { InterruptLock lock; return --value;    }
+                //postfix ++ / -- (returns pre inc/dec value)
+                T       operator ++     (const int) { InterruptLock lock; T v = value++; return v; }
+                T       operator --     (const int) { InterruptLock lock; T v = value--; return v; }
+                //other writes
+                T       operator +=     (const T v) { InterruptLock lock; return value += v;  }
+                T       operator -=     (const T v) { InterruptLock lock; return value -= v;  }
+                T       operator *=     (const T v) { InterruptLock lock; return value *= v;  }
+                T       operator /=     (const T v) { InterruptLock lock; return value /= v;  }
+                T       operator %=     (const T v) { InterruptLock lock; return value %= v;  }
+                T       operator ^=     (const T v) { InterruptLock lock; return value ^= v;  }
+                T       operator &=     (const T v) { InterruptLock lock; return value &= v;  }
+                T       operator |=     (const T v) { InterruptLock lock; return value |= v;  }
+                T       operator >>=    (const T v) { InterruptLock lock; return value >>= v; }
+                T       operator <<=    (const T v) { InterruptLock lock; return value <<= v; }
 
                 //atomic clear mask, then set mask
                 //caller responsible for getting both arguments correct
@@ -88,35 +93,31 @@ setBitmask      (T clrbm, T setbm)
                 return v;
                 }
 
-                }; //AtomRW
+                }; //Atom
 
 //........................................................................................
+
+                //can use to create a reference to an AtomRW var which
+                //only allows read-only access, but may still require an
+                //atomic read 
+
+                //not sure if this is useful
 
 ////////////////
 template
 <typename T>
 class 
-AtomRO          
+AtomRO          : Atom<T>
 ////////////////
                 {
 
-                static_assert( std::is_integral<T>::value, "AtomRO T type is not integral" );
+                //do not allow creating an instance (private constructor)
+                //(if you want to create a read-only var, there is no need for this class)
+AtomRO          (){} 
 
 public:
-
-                using type = volatile T; //make value type volatile if not already
-                static constexpr auto is_mcu_atomic_read{ alignof(type) <= 4 }; //mcu specific
-
-                //allow direct access if needed (like if irq's are already off so do not
-                //want irq protection used)
-                const type value; 
-
-operator T      () const 
-                { 
-                if constexpr( is_mcu_atomic_read ) return value;
-                InterruptLock lock;
-                return value; 
-                }
+                //can only read
+                using Atom<T>::operator T;
 
                 }; //AtomRO
 

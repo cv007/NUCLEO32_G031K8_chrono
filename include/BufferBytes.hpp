@@ -28,7 +28,7 @@ BufferBytes
 
                 u32                 wrIdx_{0};
                 u32                 rdIdx_{0};
-                CPU::AtomRW<u32>    atom_count_{0}; //count of unread data in the buffer
+                CPU::Atom<u32>      atom_count_{0}; //count of unread data in the buffer
                 u32                 maxCount_{0};   //keep track of max buffer used
 
 public:

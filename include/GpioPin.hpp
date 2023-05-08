@@ -13,12 +13,12 @@ GpioPin
                 {
 
                 struct Reg { 
-                    CPU::AtomRW<u32> atom_MODER, atom_OTYPER, atom_OSPEEDR, atom_PUPDR;
+                    CPU::Atom<u32> atom_MODER, atom_OTYPER, atom_OSPEEDR, atom_PUPDR;
                     volatile u32 IDR;
                     volatile u32 ODR;
                     volatile u32 BSRR;
-                    CPU::AtomRW<u32> atom_LCKR;
-                    CPU::AtomRW<u64> atom_AFR;
+                    CPU::Atom<u32> atom_LCKR;
+                    CPU::Atom<u64> atom_AFR;
                     volatile u32 BRR; 
                     };
 
@@ -29,7 +29,7 @@ GpioPin
 
                 //rcc io enable register, same for all instances so static
                 static inline auto& atom_rccEn_{ 
-                    *( reinterpret_cast<CPU::AtomRW<u32>*>(MCU::RCC_IOPENR) ) 
+                    *( reinterpret_cast<CPU::Atom<u32>*>(MCU::RCC_IOPENR) ) 
                     };
 
 public:
