@@ -27,12 +27,7 @@ GpioPin
                 const bool  inv_;       //invert?
                 Reg&        reg_;       //register struct access
 
-                //rcc io enable register, same for all instances so static
-                static inline auto& atom_rccEn_{ 
-                    *( reinterpret_cast<CPU::Atom<u32>*>(MCU::RCC_IOPENR) ) 
-                    };
-
-public:
+ public:
 
                 enum
 INVERT          { HIGHISON, LOWISON };
@@ -43,7 +38,7 @@ GpioPin         (MCU::PIN pin, INVERT inv = HIGHISON)
                   inv_( inv ),              //invert?
                   reg_( *reinterpret_cast<Reg*>(MCU::GPIOA + MCU::GPIO_SPACING*(pin/16)) )
                 {
-                atom_rccEn_ or_eq 1<<(pin/16);   //enable port in RCC
+                MCU::RCCreg.IOPENR or_eq 1<<(pin/16);   //enable port in RCC
                 }
 
                 //properities, all will go through writeBmv and are interrupt protected

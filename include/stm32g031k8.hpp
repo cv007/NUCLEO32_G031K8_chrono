@@ -2,6 +2,7 @@
 
 #include "Util.hpp"
 
+#include "CpuM0plus_Atom.hpp"
 
 //........................................................................................
 
@@ -12,18 +13,24 @@ MCU
                 {
                 //mcu specific info, stm32g031k8
 
-                //some addresses to make this example work
+                //some of this may find a better home (like Rcc)
 
                 enum
                 { GPIOA = 0x5000'0000, GPIO_SPACING = 0x400 };
 
                 enum
-                { RCC_BASE = 0x4002'1000, RCC_IOPENR = RCC_BASE+0x34,
-                  RCC_APBENR1 = RCC_BASE+0x3C, RCC_USART2ENbm = 1<<17,
-                  RCC_LPTIM2ENbm = 1<<30, RCC_LPTIM1ENbm = 1<<31,
-                  RCC_CCIPR = RCC_BASE+0x54, LPTIM2SELbp = 20, LPTIM1SELbp = 18,
-                  LPTIMSELbm = 3,
-                  RCC_CSR = RCC_BASE+0x60, LSIONbm = 1 };
+                { RCC_BASE = 0x4002'1000, 
+                  RCC_USART2ENbm = 1<<17,
+                  RCC_LPTIM2ENbm = 1<<30, RCC_LPTIM1ENbm = 1<<31, LPTIM2SELbp = 20, LPTIM1SELbp = 18, LPTIMSELbm = 3,
+                  LSIONbm = 1 };
+
+                //make all writes atomic so any Rcc activity can occur at multiple run levels
+                struct RccReg {
+                    CPU::Atom<u32> CR, ICSCR, CFGR, PLLCFGR, RESERVED0, RESERVED1, CIER, CIFR, CICR,     
+                    IOPRSTR, AHBRSTR, APBRSTR1, APBRSTR2, IOPENR, AHBENR, APBENR1, APBENR2,
+                    IOPSMENR, AHBSMENR, APBSMENR1, APBSMENR2, CCIPR, RESERVED2, BDCR, CSR;
+                    };
+                static inline RccReg& RCCreg{ *reinterpret_cast<RccReg*>(RCC_BASE) };
 
                 enum 
 USARTn          { USART1_BASE = 0x4001'3800, USART2_BASE = 0x4000'4400 };
@@ -77,7 +84,7 @@ Uart2_A2A3      { //Uart2, TX=PA2,RX=PA3
                     USART2_BASE,    //Usart2 base address
                     PA2, AF1,       //tx pin, alt function
                     PA3, AF1,       //rx pin, alt function
-                    []{ vu32Ref(RCC_APBENR1) = vu32Ref(RCC_APBENR1) bitor RCC_USART2ENbm; }, //init rcc
+                    []{ RCCreg.APBENR1 or_eq RCC_USART2ENbm; }, //init rcc
                     USART2_IRQ      //IRQn
                     };
                
@@ -93,12 +100,9 @@ lptim_t         = struct {
 Lptim1LSI       { 
                     LPTIM1_BASE,
                     []{ //init
-                        vu32Ref(RCC_CSR) = LSIONbm;
-                        vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM1ENbm;
-                        vu32Ref(MCU::RCC_CCIPR) = 
-                            (vu32Ref(MCU::RCC_CCIPR) 
-                            bitand compl (LPTIMSELbm<<LPTIM1SELbp)) 
-                            bitor 1<<LPTIM1SELbp;
+                        RCCreg.CSR = LSIONbm;
+                        RCCreg.APBENR1 or_eq RCC_LPTIM1ENbm;
+                        RCCreg.CCIPR = (RCCreg.CCIPR bitand compl (LPTIMSELbm<<LPTIM1SELbp)) bitor (1<<LPTIM1SELbp);
                         }, 
                     LPTIM1_IRQ
                     };
@@ -107,13 +111,10 @@ Lptim1LSI       {
 Lptim2LSI       { 
                     LPTIM2_BASE,
                     []{ //init
-                        vu32Ref(RCC_CSR) = LSIONbm;
-                        vu32Ref(MCU::RCC_APBENR1) = vu32Ref(MCU::RCC_APBENR1) bitor RCC_LPTIM2ENbm;
-                        vu32Ref(MCU::RCC_CCIPR) = 
-                            (vu32Ref(MCU::RCC_CCIPR) 
-                            bitand compl (LPTIMSELbm<<LPTIM2SELbp)) 
-                            bitor 1<<LPTIM2SELbp;
-                        }, 
+                        RCCreg.CSR = LSIONbm;
+                        RCCreg.APBENR1 or_eq RCC_LPTIM2ENbm;
+                        RCCreg.CCIPR = (RCCreg.CCIPR bitand compl (LPTIMSELbm<<LPTIM2SELbp)) bitor (1<<LPTIM2SELbp);
+                        },
                     LPTIM2_IRQ
                     };
 
