@@ -30,7 +30,8 @@ Systick
                 using duration_chrono = std::chrono::microseconds;
 
                 //SysTick registers
-                struct Reg { u32 CSR, RVR, CVR, CALIB; };
+                //no atomic protection needed as none of these registers are shared
+                struct Reg { u32 CSR, RVR, CVR; const u32 CALIB; };
 
                 //registers reference
                 static inline volatile Reg& reg_{ *(reinterpret_cast<Reg*>(0xE000'E010)) };

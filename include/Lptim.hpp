@@ -30,10 +30,12 @@ LptimClockLSI   : public CPU::Isr
                 enum { ARRbm = 1, CMPbm = 2 /* CF,MIE,M */ };
 
                 //lptim registers
+                //no atomic protection needed as none of these registers are shared
+                //with any other Lptim instance
                 struct Reg { u32 ISR, ICR, IER, CFGR, CR, CMP, ARR, CNT, reserved1_, CFGR2; };
 
                 //vars
-                volatile Reg&               reg_;
+                volatile Reg&               reg_; //need volatile as Reg struct members are not
                 Nvic::IRQ_PRIORITY          irqPriority_;
                 MCU::IRQn                   irqn_;
                 CPU::Atom<i64>              atom_lsiCyclesTotal_;

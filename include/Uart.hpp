@@ -19,10 +19,12 @@ Uart
                   public CPU::Isr
                 {
 
+                //no atomic protection needed as none of these registers are shared
+                //with any other Uart instance
                 struct Reg { u32 CR1, CR2, CR3, BRR, GTPR, RTOR, RQR, ISR, ICR, RDR, 
                              TDR, PRESC; };
                 
-                volatile Reg&       reg_;
+                volatile Reg&       reg_; //need volatile as Reg struct members are not
                 BufferBytes         buffer_;
                 Nvic::IRQ_PRIORITY  irqPriorty_;
                 MCU::IRQn           irqn_;
