@@ -35,7 +35,8 @@ public:
 
                 template<unsigned N>
 BufferBytes     (std::array<u8,N>& buf) 
-                : buf_{ buf.data() }, size_{ N }
+                : buf_{ buf.data() }, 
+                  size_{ N }
                 {
                 }
 
@@ -53,10 +54,10 @@ read            (u8& v)
 write           (u8 v)
                 {
                 if( atom_count_ >= size_ ) return false;
-                if( atom_count_ > maxCount_ ) maxCount_ = atom_count_;
                 buf_[wrIdx_++] = v;
                 if( wrIdx_ >= size_ ) wrIdx_ = 0;
                 atom_count_++;
+                if( atom_count_ > maxCount_ ) maxCount_ = atom_count_;
                 return true;
                 }
 
@@ -69,17 +70,17 @@ flush           ()
                 }
 
                 auto  
-maxUsed         () { return maxCount_; }
+sizeUsedMax     () { return maxCount_; }
                 auto  
 sizeUsed        () { return atom_count_; }
+                auto  
+size            () { return size_; }
+                auto  
+sizeFree        () { return size_ - sizeUsed(); }
                 auto  
 isFull          () { return sizeUsed() >= size_; }
                 auto    
 isEmpty         () { return sizeUsed() == 0; }
-                auto  
-sizeFree        () { return size_ - sizeUsed(); }
-                auto  
-sizeMax         () { return size_; }
 
                 }; //Buffer
 

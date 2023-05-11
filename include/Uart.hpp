@@ -104,6 +104,11 @@ write           (std::array<u8,N>& arr)
                 return true;
                 }
 
+                auto 
+bufferUsedMax   (){ return buffer_.sizeUsedMax(); }
+                auto 
+bufferUsed      (){ return buffer_.sizeUsed(); }
+
                 template<unsigned N>
 Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ_PRIORITY irqPriority)
                 : reg_( *(reinterpret_cast<Reg*>(u.addr)) ),

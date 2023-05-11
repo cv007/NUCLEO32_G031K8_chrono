@@ -1,6 +1,6 @@
 //-Os -mcpu=cortex-m0plus -std=c++17 -Wall -Wextra -Wpedantic
 //........................................................................................
-#if 1
+
 ////////////////
 // main.cpp
 ////////////////
@@ -88,11 +88,13 @@ printRandom     (Task_t& task)
                 //     << fg(20,255,200) << Hex0xpad(8) << r 
                 //     << endl << FMT::reset << normal;
 
+
                 uart,
                 fg(WHITE), now().time_since_epoch(), space,
                 fg(WHITE), "[", Hex0xpad(8), task.id, "] ",
                 fg(20,200,255), "random ", bin0bpad(32), r, space,
                 fg(20,255,200), Hex0xpad(8), r, 
+fg(20,25,200), " buffer count: ", uart.bufferUsed(),
                 endl, FMT::reset, normal;
 
                 board.uart.release( task.id );
@@ -349,13 +351,3 @@ main            ()
                 } //main
 
 
-#endif
-
-#if 0
-#include "GpioPin.hpp"
-GpioPin debugPin = GpioPin( MCU::PA15 );
-
-int main(){
-    while(1){}
-}
-#endif
