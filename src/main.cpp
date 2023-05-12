@@ -94,7 +94,7 @@ printRandom     (Task_t& task)
                 fg(WHITE), "[", Hex0xpad(8), task.id, "] ",
                 fg(20,200,255), "random ", bin0bpad(32), r, space,
                 fg(20,255,200), Hex0xpad(8), r, 
-fg(20,25,200), " buffer count: ", uart.bufferUsed(),
+                fg(50,75,200), " uart buffer max used: ", uart.bufferUsedMax(),
                 endl, FMT::reset, normal;
 
                 board.uart.release( task.id );

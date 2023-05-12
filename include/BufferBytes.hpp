@@ -56,13 +56,13 @@ write           (u8 v)
                 if( atom_count_ >= size_ ) return false;
                 buf_[wrIdx_++] = v;
                 if( wrIdx_ >= size_ ) wrIdx_ = 0;
-                atom_count_++;
-                if( atom_count_ > maxCount_ ) maxCount_ = atom_count_;
+                auto c = ++atom_count_;
+                if( c > maxCount_ ) maxCount_ = c;
                 return true;
                 }
 
                 auto
-flush           () 
+clear           () 
                 {
                 InterruptLock lock;
                 //use atom_count_.value directly to bypass atomic since we take care of it here
