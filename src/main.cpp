@@ -186,7 +186,7 @@ run             (SomeTasks* st)
                     uart,
                         fg(WHITE), dur, fg(color), 
                         " [", Hex0x(8,reinterpret_cast<u32>(this)), dec,
-                        "][", n, "][", decv(10,runCount_), "] ";
+                        "][", n, "][", dec0v(10,runCount_), "] ";
 
                     idx++;
                     return false;
@@ -198,7 +198,7 @@ run             (SomeTasks* st)
                     }
 
                 if( idx++ < (arraySize(words) + 3) ){
-                    uart << spacew(3) << random.read<u8>() << space;
+                    uart << decv(3,random.read<u8>()) << space;
                     return false;
                     }
 
