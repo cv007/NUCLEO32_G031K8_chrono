@@ -113,7 +113,7 @@ restart         (Nvic::IRQ_PRIORITY priority = DEFAULT_PRIORITY)
                 //ratio's used for this chrono clock are always <num=1,den=n>,
                 //so will only need period::den
                 //division is used if needed- timing a now() call takes about 50us 
-                //w/16MHz cpu speed, which is about 800 cpu clocks (seesm high, but i64 is in use)
+                //w/16MHz cpu speed, which is about 800 cpu clocks (seems high, but i64 is in use)
                 //if can use shift, 9us w/16MHz cpu speed, which is about 144 cpu clocks
                 static auto
 cycles2chrono   ()
@@ -177,7 +177,7 @@ wasIrq          ()
                 #include "Print.hpp"
 
                 //any duration that can implicitly convert to microseconds
-                // "d hh:mm:ss.ususus" d is width 4, left space padded
+                // "d hh:mm:ss.ususus" d (day) is width 4, left space padded
                 // "0 00:01:07.825696"
                 inline FMT::Print&   
 operator<<      (FMT::Print& p, std::chrono::microseconds dur) 

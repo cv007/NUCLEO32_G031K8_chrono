@@ -321,54 +321,54 @@ setwf           (int n, char c) { return {n,c}; }
                 inline Print&
                 operator<< (Print& p, Setwf s) { p.width(s.n); return p.fill(s.c); }
 
-                // << hexpad(8) << 0x1a  -->> 0000001a
-                struct Padh { int n; };
-                inline Padh
-hexpad          (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, Padh s) { return p << hex << nouppercase << noshowbase << internal << setwf(s.n,'0'); }
+                // << hexv(8,0x1a)  -->> 0000001a
+                template<typename T> struct Padhv { int n; T v; };
+                template<typename T> inline Padhv<T> 
+hexv            (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, Padhv<T> s) { return p << hex << nouppercase << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << Hexpad(8) << 0x1a  -->> 0000001A
-                struct PadH { int n; };
-                inline PadH
-Hexpad          (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, PadH s) { return p << hex << uppercase << noshowbase << internal << setwf(s.n,'0'); }
+                // << Hex(8,0x1a)  -->> 0000001A
+                template<typename T> struct PadHv { int n; T v; };
+                template<typename T> inline PadHv<T> 
+Hexv            (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, PadHv<T> s) { return p << hex << uppercase << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << hex0xpad(8) << 0x1a  -->> 0x0000001a
-                struct Padh0x { int n; };
-                inline Padh0x
-hex0xpad        (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, Padh0x s) { return p << hex << nouppercase << showbase << internal << setwf(s.n,'0'); }
+                // << hex0x(8,0x1a)  -->> 0x0000001a
+                template<typename T> struct Padh0xv { int n; T v; };
+                template<typename T> inline Padh0xv<T> 
+hex0x           (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, Padh0xv<T> s) { return p << hex << nouppercase << showbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << Hex0xpad(8) << 0x1a  -->> 0x0000001A
-                struct PadH0x { int n; };
-                inline PadH0x
-Hex0xpad        (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, PadH0x s) { return p << hex << uppercase << showbase << internal << setwf(s.n,'0'); }
+                // << Hex0x(8,0x1a) -->> 0x0000001A
+                template<typename T> struct PadH0xv { int n; T v; };
+                template<typename T> inline PadH0xv<T> 
+Hex0x           (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, PadH0xv<T> s) { return p << hex << uppercase << showbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << decpad(8) << 123  -->> 00000123
-                struct PadD { int n; };
-                inline PadD
-decpad          (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, PadD s) { return p << dec << internal << setwf(s.n,'0'); }
+                // << decv(8,123)  -->> 00000123
+                template<typename T> struct PadDv { int n; T v; };
+                template<typename T> inline PadDv<T> 
+decv            (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, PadDv<T> s) { return p << dec << internal << setwf(s.n,'0') << s.v; }
 
-                // << binpad(8) << 123  -->> 01111011
-                struct PadB { int n; };
-                inline PadB 
-binpad          (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, PadB s) { return p << bin << noshowbase << internal << setwf(s.n,'0'); }
+                // << binv(8,123)  -->> 01111011
+                template<typename T> struct PadBv { int n; T v; };
+                template<typename T> inline PadBv<T> 
+binv            (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, PadBv<T> s) { return p << bin << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << bin0bpad(8) << 123  -->> 0b01111011
-                struct PadB0b { int n; };
-                inline PadB0b 
-bin0bpad        (int n) { return {n}; }
-                inline Print&
-                operator<< (Print& p, PadB0b s) { return p << bin << showbase << internal << setwf(s.n,'0'); }
+                // << bin0b(8,123)  -->> 0b01111011
+                template<typename T> struct PadB0bv { int n; T v; };
+                template<typename T> inline PadB0bv<T> 
+bin0b            (int n, T v) { return {n,v}; }
+                template<typename T> inline Print&
+                operator<< (Print& p, PadB0bv<T> s) { return p << bin << showbase << internal << setwf(s.n,'0') << s.v; }
 
                 // << space -->> ' '
                 enum Space { 

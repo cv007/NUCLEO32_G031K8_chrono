@@ -31,7 +31,7 @@ private:        //not directly accessible
                 //uart buffer
                 std::array<u8,256> uartBuffer_;
                 //Uart2, TX=PA2,RX=PA3 
-                Uart uart_{ MCU::Uart2_A2A3, 230400, uartBuffer_, Nvic::PRIORITY2 };
+                Uart uart_{ MCU::Uart2_A2A3, 460'800, uartBuffer_, Nvic::PRIORITY2 };
 
                 //the uart is available for a new owner when the uart goes idle (buffer
                 //empty and tx complete), so a task can fill the buffer quickly and return

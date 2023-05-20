@@ -12,7 +12,7 @@
 
                 // first create your buffer-
                 // std::array<u8,128> buf;
-                // then use the reference to creat a Buffer instance-
+                // then use the reference to create a Buffer instance-
                 // Buffer mybuffer{ buf };
                 // and use as needed-
                 // auto ret = myBuffer.write(1); //true=written, false=full
@@ -28,7 +28,7 @@ BufferBytes
 
                 u32                 wrIdx_{0};
                 u32                 rdIdx_{0};
-                CPU::Atom<u32>      atom_count_{0}; //count of unread data in the buffer
+                CPU::Atom<u32>      atom_count_{0}; //count of current bytes used
                 u32                 maxCount_{0};   //keep track of max buffer used
 
 public:
@@ -44,8 +44,8 @@ BufferBytes     (std::array<u8,N>& buf)
 read            (u8& v)
                 {
                 if( atom_count_ == 0 ) return false;
-                v = buf_[rdIdx_++];
-                if( rdIdx_ >= size_ ) rdIdx_ = 0;
+                v = buf_[rdIdx_];
+                if( ++rdIdx_ >= size_ ) rdIdx_ = 0;
                 atom_count_--;
                 return true;
                 }
@@ -54,8 +54,8 @@ read            (u8& v)
 write           (u8 v)
                 {
                 if( atom_count_ >= size_ ) return false;
-                buf_[wrIdx_++] = v;
-                if( wrIdx_ >= size_ ) wrIdx_ = 0;
+                buf_[wrIdx_] = v;
+                if( ++wrIdx_ >= size_ ) wrIdx_ = 0;
                 auto c = ++atom_count_;
                 if( c > maxCount_ ) maxCount_ = c;
                 return true;
@@ -82,6 +82,6 @@ isFull          () { return sizeUsed() >= size_; }
                 auto    
 isEmpty         () { return sizeUsed() == 0; }
 
-                }; //Buffer
+                }; //BufferBytes
 
 //........................................................................................
