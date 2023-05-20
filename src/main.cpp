@@ -290,7 +290,6 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
                 int
 main            ()
                 {
-
                 //boot up code = 22 (in System.hpp)
                 //any use of 0 is an invalid code, so will get code 99 (invalid code)
                 board.led.infoCode( System::BOOT_CODE ); 

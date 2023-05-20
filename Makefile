@@ -60,8 +60,11 @@ LDFLAGS += -mcpu=cortex-m0plus
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS += -Wl,-Map=$(TARGETMAP)
 LDFLAGS += -fno-exceptions
-LDFLAGS += -Wl,-wrap=malloc #will find out if malloc/alloc is used without our knowledge
-LDFLAGS += -Wl,-wrap=calloc #such as a library function that gets brought in
+#will get undefined reference to `_sbrk' before the following lines takes effect
+#when using nano.specs, so probably not really needed
+#(intended to get compile time error if malloc/calloc happen to get brought in)
+LDFLAGS += -Wl,-wrap=malloc
+LDFLAGS += -Wl,-wrap=calloc
 
 # object list (to obj dir) based on all src files
 OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
