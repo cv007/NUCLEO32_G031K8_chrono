@@ -11,17 +11,17 @@ CPU
 ////////////////
                 {
 
-                class InterruptLock; //declare (if not inlcuded ahead of this header)
+                class InterruptLock; //declare (if not included ahead of this header)
 
 //........................................................................................
 
                 // prepending atom_ to var names to indicate var is atomic
                 // mainly to prevent double protecting because you may forget
-                // the var was declared as AtomRW type
+                // the var was declared as Atom type
                 //
-                // AtomRW<u32> atom_mySharedVar;
+                // Atom<u32> atom_mySharedVar;
                 // atom_mySharedVar++; //atomic
-                // struct Reg { AtomRW<u32> atom_CTRLA; };
+                // struct Reg { Atom<u32> atom_CTRLA; };
                 // Reg& reg{ *reinterpret_cast<Reg*>(0x40001000) };
                 // reg.atom_CTRLA or_eq 1; //atomic
 
@@ -33,7 +33,7 @@ Atom
 ////////////////
                 {
 
-                static_assert( std::is_integral<T>::value, "AtomRW T type is not integral" );
+                static_assert( std::is_integral<T>::value, "Atom T type is not integral" );
 
 public:
 
@@ -97,9 +97,9 @@ setBitmask      (T clrbm, T setbm)
 
 //........................................................................................
 
-                //can use to create a reference to an AtomRW var which
+                //can use to create a reference to an Atom var which
                 //only allows read-only access, but may still require an
-                //atomic read 
+                //atomic read (like if 64bit value you want to allow only read access)
 
                 //not sure if this is useful
 
