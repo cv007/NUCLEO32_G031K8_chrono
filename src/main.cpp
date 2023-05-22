@@ -32,15 +32,34 @@
                 using namespace ANSI;               //FMT::ANSI
                 using namespace std::chrono;
 
+                //use debug pin to time tasks via logic analyzer
+                //turns on pin at constructor, off at desctructor
+                //place in any scope you want to time
+                // void func(){
+                //  DebugPin dp; //object name not important, pin turns on here
+                //  ...
+                // } //pin turns off at end of scope
+                static constexpr auto DEBUG_PIN{ true }; //false to disable
+                struct DebugPin {
+                    DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.on(); }
+                    ~DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.off(); }
+                };
+
+                //create a u32 id from a type T (such as a function)
+                template<typename T> 
+                static constexpr auto
+makeID          (T t){ return reinterpret_cast<u32>(t); }
+
 //........................................................................................
 
                 static bool
 printTask       (Task_t& task)
                 {
-                Uart* u = board.uart.take( task.id );
-                if( not u ) return false; //false=try again
-                auto& uart = *u;
-                
+                auto uartp{ board.uart.take(task.id) };
+                if( not uartp ) return false; //false=try again
+                auto& uart{ *uartp };
+
+                DebugPin dp;                
                 auto ti = task.interval + milliseconds(20);
                 if( ti > milliseconds(600) ) ti = milliseconds(400);
                 task.interval = ti; //set new interval
@@ -51,8 +70,8 @@ printTask       (Task_t& task)
                     fg(WHITE*0.4), now().time_since_epoch(), space,
                     fg(WHITE*0.4), "[", Hex0x(8,task.id), "] ",
                     fg(50,90,150), dec, setwf(5,'_'), n, space,
-                    fg(GREEN*1.5), Hex0x(4,n), space,
-                    fg(GREEN_YELLOW), bin0b(16,n), endl, FMT::reset, normal;
+                    fg(GREEN*1.5), Hex0x(4,n), endl, FMT::reset, normal;
+
 
                 n++;
                 board.uart.release( task.id );
@@ -64,16 +83,17 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t& task)
                 {
-                Uart* u = board.uart.take( task.id );
-                if( not u ) return false;
-                auto& uart = *u;
+                auto uartp{ board.uart.take(task.id) };
+                if( not uartp ) return false; //false=try again
+                auto& uart{ *uartp };
 
+                DebugPin dp;
                 auto r = random.read();
 
                 uart,
                     fg(WHITE), now().time_since_epoch(), space,
                     fg(WHITE), "[", Hex0x(8,task.id), "] ",
-                    fg(20,200,255), "random ", bin0b(32,r), space,
+                    fg(20,200,255), "random ",
                     fg(20,255,200), Hex0x(8,r), space,
                     fg(50,75,200), "uart buffer max used: ", uart.bufferUsedMax(),
                         endl, FMT::reset, normal;
@@ -87,9 +107,8 @@ printRandom     (Task_t& task)
                 //interval used when adding to tasks is the DOT period
                 //all periods are based on the DOT period
                 static bool
-ledMorseCode    (Task_t&)
+ledMorseCode    (Task_t& task)
                 {
-
                 // "sos"
                 // 10101 000 11101110111 000 10101 0..
                 // |---|     |---------|     |---|
@@ -98,12 +117,17 @@ ledMorseCode    (Task_t&)
                 // 0000000=7t off (word spacing)
                 // 00000000000000=14t off (message spacing)
                 static constexpr auto msg{ "stm32 is ok" };
-
                 static int msgIdx;
                 static u32 binmask;
                 static u32 bin;
                 static char nextc;
                 static bool isExtraSpacing;
+
+                auto ledp{ board.led.take(task.id) };
+                if( not ledp ) return false;
+                auto& led{ *ledp };
+
+                DebugPin dp;
 
                 if( binmask == 0 ){ 
                     if( nextc == 0 ) msgIdx = 0;
@@ -115,7 +139,7 @@ ledMorseCode    (Task_t&)
                     isExtraSpacing = false;
                     }
                 
-                board.led.on( bin bitand binmask );                 
+                led.on( bin bitand binmask );                 
                 binmask >>= 1;
                 if( binmask == 0 and not isExtraSpacing ){
                     //the morse char includes the 3 off periods between chars
@@ -139,7 +163,6 @@ class
 SomeTasks       
 ////////////////
                 {
-
                 static inline SomeTasks* instances_[8];
                 Task_t task_; //func unused
                 u32 runCount_;
@@ -171,9 +194,9 @@ run             (SomeTasks* st)
                 static const char* words[]{ "Hello", "World" };
 
                 auto id{ reinterpret_cast<u32>(st) };
-                Uart* u = board.uart.take( id );
-                if( not u ) return false;
-                auto& uart = *u;
+                auto uartp{ board.uart.take(id) };
+                if( not uartp ) return false; //false=try again
+                auto& uart{ *uartp };
 
                 if( idx < 0 ){ 
                     auto n = myInstanceNum(st); 
@@ -221,6 +244,7 @@ SomeTasks       (microseconds interval = 0ms)
                 static bool
 runAll          (Task_t&)
                 {
+                DebugPin dp;
                 for( auto& st : instances_ ){
                     if( not st ) continue;
                     auto tp = now();
@@ -244,9 +268,10 @@ runAll          (Task_t&)
                 static bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                Uart* u = board.uart.take( task.id );
-                if( not u ) return false; //keep trying
-                auto& uart = *u;
+                auto uartp{ board.uart.take(task.id) };
+                if( not uartp ) return false; //false=try again
+                auto& uart{ *uartp };
+
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
                     board.uart.release( task.id ); //now release uart
@@ -256,8 +281,9 @@ showRandSeeds   (Task_t& task)
                 //initial interval of 0ms, print data
                 uart,
                     normal, endl,
-                    "   seed0: ", Hex0x(8,random.seed0()), endl,
-                    "   seed1: ", Hex0x(8,random.seed1()), endl, 
+                    "   initial seed values for random:", endl, endl,
+                    "     seed0: ", Hex0x(8,random.seed0()), endl,
+                    "     seed1: ", Hex0x(8,random.seed1()), endl, 
                     endl, dec;
 
                 //hold uart for 5s so we can view
@@ -270,10 +296,10 @@ showRandSeeds   (Task_t& task)
                 void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                static const auto id{ reinterpret_cast<u32>(timePrintu32) }; //create our own id
-                Uart* u = board.uart.take( id ); //if we are the only function in use, should not fail
-                if( not u ) return; 
-                auto& uart = *u;
+                auto uartp{ board.uart.take(makeID(timePrintu32)) };
+                if( not uartp ){ while(1){} }
+                auto& uart{ *uartp };
+
                 uint32_t v = 0xFFFFFFFF;
                 uart << bin; //set as needed
                 while(1){
@@ -290,8 +316,14 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
 main            ()
                 {
                 //boot up code = 22 (in System.hpp)
-                //any use of 0 is an invalid code, so will get code 99 (invalid code)
-                board.led.infoCode( System::BOOT_CODE ); 
+                //any use of 0 is an invalid code, so will get code 99 (invalid code)   
+                const auto id{ makeID(main) };
+                auto ledp = board.led.take( id ); //should not fail, we are the first to use
+                if( ledp ){ 
+                    auto& led{ *ledp };
+                    led.infoCode( System::BOOT_CODE ); 
+                    board.led.release( id );
+                    }
 
                 //systick started at first use (infoCode uses systick, so already started)
                 //restart systick after any clock speed changes
@@ -305,15 +337,13 @@ main            ()
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );
-                tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks
+                tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
                 tasks.insert( printRandom, 250ms );
 
                 while(1){ 
-                    //watch run periods via logic analyzer
-                    board.debugPin.on();
                     auto nextRunAt = tasks.run();
-                    board.debugPin.off();
-                    while( nextRunAt > now() ){                        
+                    while( nextRunAt > now() ){ 
+                        //continue loop only if we wake from systick irq
                         while( not systick.wasIrq() ) CPU::waitIrq();
                         }
                     }

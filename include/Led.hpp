@@ -61,6 +61,10 @@ infoCode        (u8 code, u8 repeatN = 1, u16 ms = 300)
                     }
                 }
 
+                //for Ownerhip class, led is always idle
+                bool
+isIdle          (){ return true; }
+
                 }; //Led
 
 //........................................................................................

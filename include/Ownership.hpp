@@ -17,26 +17,26 @@ Ownership
 
                 u32 owner_; //unique id (like function address)
                 u32 ownerPending_; //new owner, but waiting on device
-                T* device_;
+                T& device_;
 public:
 
 Ownership       (T& device)
-                : device_( &device )
+                : device_( device )
                 {}
 
                 T*
 take            (u32 id)
                 {
-                if( id == owner_ ) return device_;          //already owned by id
+                if( id == owner_ ) return &device_;         //already owned by id
                 InterruptLock lock;                         //protect writes to owner_, ownerPending_
                 if( not ownerPending_ ) ownerPending_ = id; //become a pending owner if available
                 if( owner_ or (id != ownerPending_) ) return nullptr; //someone else owns or is pending owner
                 //device ownership available and id is ownerPending_
-                if( not device_->isIdle() ) return nullptr;  //device idle check failed
+                if( not device_.isIdle() ) return nullptr;  //device idle check failed
                 //ownerPending_ -> owner_
                 owner_ = ownerPending_;
                 ownerPending_ = 0;
-                return device_;
+                return &device_;
                 }
 
                 T*
