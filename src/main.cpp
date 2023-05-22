@@ -22,7 +22,7 @@
 
                 static Systick systick;
                 static Tasks_t tasks;               //list of Task_t's
-                Board board;
+                Board dev;
 
                 //alias names for easier use
                 auto& now = systick.now;            //returns a chrono::time_point
@@ -41,8 +41,8 @@
                 // } //pin turns off at end of scope
                 static constexpr auto DEBUG_PIN{ true }; //false to disable
                 struct DebugPin {
-                    DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.on(); }
-                    ~DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.off(); }
+                    DebugPin(){ if constexpr( DEBUG_PIN ) dev.debugPin.on(); }
+                    ~DebugPin(){ if constexpr( DEBUG_PIN ) dev.debugPin.off(); }
                 };
 
                 //create a u32 id from a type T (such as a function)
@@ -55,7 +55,7 @@ makeID          (T t){ return reinterpret_cast<u32>(t); }
                 static bool
 printTask       (Task_t& task)
                 {
-                auto uartp{ board.uart.take(task.id) };
+                auto uartp{ dev.uart.open(task.id) };
                 if( not uartp ) return false; //false=try again
                 auto& uart{ *uartp };
 
@@ -69,12 +69,11 @@ printTask       (Task_t& task)
                 uart,
                     fg(WHITE*0.4), now().time_since_epoch(), space,
                     fg(WHITE*0.4), "[", Hex0x(8,task.id), "] ",
-                    fg(50,90,150), dec, setwf(5,'_'), n, space,
-                    fg(GREEN*1.5), Hex0x(4,n), endl, FMT::reset, normal;
-
+                    fg(50,90,150), dec_(5,n), space,
+                    fg(GREEN*1.5), Hex0x(4,n), endl;
 
                 n++;
-                board.uart.release( task.id );
+                dev.uart.close( task.id );
                 return true;
                 } //printTask
 
@@ -83,7 +82,7 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t& task)
                 {
-                auto uartp{ board.uart.take(task.id) };
+                auto uartp{ dev.uart.open(task.id) };
                 if( not uartp ) return false; //false=try again
                 auto& uart{ *uartp };
 
@@ -98,7 +97,7 @@ printRandom     (Task_t& task)
                     fg(50,75,200), "uart buffer max used: ", uart.bufferUsedMax(),
                         endl, FMT::reset, normal;
 
-                board.uart.release( task.id );
+                dev.uart.close( task.id );
                 return true;
                 } //printRandom
 
@@ -123,7 +122,7 @@ ledMorseCode    (Task_t& task)
                 static char nextc;
                 static bool isExtraSpacing;
 
-                auto ledp{ board.led.take(task.id) };
+                auto ledp{ dev.led.open(task.id) };
                 if( not ledp ) return false;
                 auto& led{ *ledp };
 
@@ -194,7 +193,7 @@ run             (SomeTasks* st)
                 static const char* words[]{ "Hello", "World" };
 
                 auto id{ reinterpret_cast<u32>(st) };
-                auto uartp{ board.uart.take(id) };
+                auto uartp{ dev.uart.open(id) };
                 if( not uartp ) return false; //false=try again
                 auto& uart{ *uartp };
 
@@ -208,7 +207,7 @@ run             (SomeTasks* st)
                     uart,
                         fg(WHITE), dur, fg(color), 
                         " [", Hex0x(8,reinterpret_cast<u32>(this)), dec,
-                        "][", n, "][", dec0v(10,runCount_), "] ";
+                        "][", n, "][", dec0(10,runCount_), "] ";
 
                     idx++;
                     return false;
@@ -220,14 +219,14 @@ run             (SomeTasks* st)
                     }
 
                 if( idx++ < (arraySize(words) + 3) ){
-                    uart << decv(3,random.read<u8>()) << space;
+                    uart << dec0(3,random.read<u8>()) << space;
                     return false;
                     }
 
                 uart << endl;
                 idx = -1;
                 uart << normal;
-                board.uart.release( id );
+                dev.uart.close( id );
                 runCount_++;  
                 st->task_.interval = milliseconds( random.read<u16>(500,2000) );
                 return true; //update interval
@@ -265,16 +264,16 @@ runAll          (Task_t&)
 
 //........................................................................................
 
-                static bool
+                static inline bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                auto uartp{ board.uart.take(task.id) };
+                auto uartp{ dev.uart.open(task.id) };
                 if( not uartp ) return false; //false=try again
                 auto& uart{ *uartp };
 
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
-                    board.uart.release( task.id ); //now release uart
+                    dev.uart.close( task.id ); //now release uart
                     return true; //this task gets deleted
                     }
 
@@ -293,19 +292,19 @@ showRandSeeds   (Task_t& task)
 
 //........................................................................................
 
-                void
+                static void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                auto uartp{ board.uart.take(makeID(timePrintu32)) };
+                auto uartp{ dev.uart.open(makeID(timePrintu32)) };
                 if( not uartp ){ while(1){} }
                 auto& uart{ *uartp };
 
                 uint32_t v = 0xFFFFFFFF;
                 uart << bin; //set as needed
                 while(1){
-                    board.debugPin.on();
+                    dev.debugPin.on();
                     uart << v; //dec 307us, hex 298us, oct 417, bin 693us
-                    board.debugPin.off();
+                    dev.debugPin.off();
                     delay( 20ms );
                     }
                 }
@@ -318,11 +317,11 @@ main            ()
                 //boot up code = 22 (in System.hpp)
                 //any use of 0 is an invalid code, so will get code 99 (invalid code)   
                 const auto id{ makeID(main) };
-                auto ledp = board.led.take( id ); //should not fail, we are the first to use
+                auto ledp = dev.led.open( id ); //should not fail, we are the first to use
                 if( ledp ){ 
                     auto& led{ *ledp };
                     led.infoCode( System::BOOT_CODE ); 
-                    board.led.release( id );
+                    dev.led.close( id );
                     }
 
                 //systick started at first use (infoCode uses systick, so already started)
@@ -333,7 +332,7 @@ main            ()
 
                 //show Random seed values at boot to see if they look ok
                 //run now, run once (will hold onto the uart for 5s)
-                tasks.insert( showRandSeeds ); 
+                //tasks.insert( showRandSeeds ); 
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( printTask, 500ms );

@@ -25,7 +25,7 @@ Ownership       (T& device)
                 {}
 
                 T*
-take            (u32 id)
+open            (u32 id)
                 {
                 if( id == owner_ ) return &device_;         //already owned by id
                 InterruptLock lock;                         //protect writes to owner_, ownerPending_
@@ -39,13 +39,14 @@ take            (u32 id)
                 return &device_;
                 }
 
-                T*
-release         (u32 id)
+                bool
+close           (u32 id)
                 {
-                //no interrupt lock required- only id can change owner_ to 0
-                //and 'take' has owner_ interrupt protected
-                if( id == owner_ ) owner_ = 0; //only owner can release                
-                return nullptr; //whether was owner or not- null device pointer
+                //no interrupt lock required- only owner(id) can change owner_ to 0
+                //and 'open' has owner_ interrupt protected
+                if( id != owner_ ) return false; //only owner can release
+                owner_ = 0;
+                return true;
                 }
 
                 }; //Ownership

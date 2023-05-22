@@ -81,8 +81,8 @@ public:
                 //select which board to use
                 using Board = Boards::Nucleo32g031;
 
-                //and let everone know 'board' will be the name to use for the single
+                //and let everone know 'dev' will be the name to use for the single
                 //instace of Board created (in some source file)
-                extern Board board;
+                extern Board dev;
 
 //........................................................................................

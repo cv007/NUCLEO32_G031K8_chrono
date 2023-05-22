@@ -321,17 +321,17 @@ setwf           (int n, char c) { return {n,c}; }
                 inline Print&
                 operator<< (Print& p, Setwf s) { p.width(s.n); return p.fill(s.c); }
 
-                // << hexv(8,0x1a)  -->> 0000001a
+                // << hex0(8,0x1a)  -->> 0000001a
                 template<typename T> struct Padhv { int n; T v; };
                 template<typename T> inline Padhv<T> 
-hexv            (int n, T v) { return {n,v}; }
+hex0            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, Padhv<T> s) { return p << hex << nouppercase << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << Hex(8,0x1a)  -->> 0000001A
+                // << Hex0(8,0x1a)  -->> 0000001A
                 template<typename T> struct PadHv { int n; T v; };
                 template<typename T> inline PadHv<T> 
-Hexv            (int n, T v) { return {n,v}; }
+Hex0            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadHv<T> s) { return p << hex << uppercase << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
@@ -352,28 +352,28 @@ Hex0x           (int n, T v) { return {n,v}; }
                 // << decv(8,123)  -->>      123
                 template<typename T> struct PadDv { int n; T v; };
                 template<typename T> inline PadDv<T> 
-decv            (int n, T v) { return {n,v}; }
+dec_            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadDv<T> s) { return p << dec << internal << setwf(s.n,' ') << s.v; }
 
-                // << dec0v(8,123)  -->> 00000123
+                // << dec0(8,123)  -->> 00000123
                 template<typename T> struct PadD0v { int n; T v; };
                 template<typename T> inline PadD0v<T> 
-dec0v           (int n, T v) { return {n,v}; }
+dec0            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadD0v<T> s) { return p << dec << internal << setwf(s.n,'0') << s.v; }
 
-                // << binv(8,123)  -->>  1111011
+                // << bin_(8,123)  -->>  1111011
                 template<typename T> struct PadBv { int n; T v; };
                 template<typename T> inline PadBv<T> 
-binv            (int n, T v) { return {n,v}; }
+bin_            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadBv<T> s) { return p << bin << noshowbase << internal << setwf(s.n,' ') << s.v; }
 
-                // << bin0v(8,123)  -->> 01111011
+                // << bin0(8,123)  -->> 01111011
                 template<typename T> struct PadB0v { int n; T v; };
                 template<typename T> inline PadB0v<T> 
-bin0v           (int n, T v) { return {n,v}; }
+bin0            (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadB0v<T> s) { return p << bin << noshowbase << internal << setwf(s.n,'0') << s.v; }
 
