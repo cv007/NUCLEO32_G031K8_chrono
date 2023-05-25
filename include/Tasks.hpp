@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Util.hpp"
+#include "Lptim.hpp"
 #include <chrono>
 
 
@@ -23,10 +24,11 @@ public:
                     time_point  runat;      //next run time
                     taskFunc_t  func;       //function to call
                     duration    interval;   //interval
-                    u32         id;         //a unique id (from function address, should be unique)
                     };
 private:
                 static inline Task tasks_[N]{};
+
+                static inline auto now = Clock::now;
 
                 //if task function returns true-
                 //  task runat time point will be updated if
@@ -40,7 +42,7 @@ private:
 run             (Task& t, bool force = false)
                 {
                 if( not t.func ) return;
-                auto tp = Clock::now(); //time_point
+                auto tp = now(); //time_point
                 if( not force and (t.runat > tp) ) return;
                 if( not t.func( t ) ) return;
                 if( t.interval.count() > 0 ) t.runat = tp + t.interval;
@@ -49,6 +51,10 @@ run             (Task& t, bool force = false)
                 }
 
 public:
+
+                static u32 
+id              (Task& t) { return reinterpret_cast<u32>(t.func); }
+
                 //run a single task (if in the task list)
                 static void
 run             (taskFunc_t f){ for(auto& t : tasks_) if(t.func == f) run(t, true); } //true = force
@@ -64,7 +70,9 @@ run             (taskFunc_t f){ for(auto& t : tasks_) if(t.func == f) run(t, tru
 run             ()
                 { 
                 for( auto& t : tasks_ ) run(t); 
-                time_point next{ Clock::now() + std::chrono::hours(24) }; //future
+                //init a 'next' time far in future so we can find the soonest next task
+                //(and if no tasks in next 24hours, will run in 24hours anyway)
+                time_point next{ now() + std::chrono::hours(24) };
                 for( auto& t : tasks_ ){
                     if( not t.func ) continue;
                     if( t.runat < next ) next = t.runat; //find soonest next runat time
@@ -83,8 +91,9 @@ remove          (taskFunc_t f)
                     }
                 }
 
-                //if interval is 0- task runs right away (soon anyway)
+                //if interval is 0- task runs right away and
                 //will only run 1 time unless task sets interval or runat
+                //if interval is not 0 the task next runs at now()+interval
                 static auto
 insert          (taskFunc_t f, duration interval = std::chrono::milliseconds(0))
                 {
@@ -93,28 +102,19 @@ insert          (taskFunc_t f, duration interval = std::chrono::milliseconds(0))
                     if( t.func ) continue;
                     t.func = f;
                     t.interval = interval;
-                    t.runat = Clock::now() + interval;
-                    t.id = reinterpret_cast<u32>(f);
+                    t.runat = now() + interval;
                     return true;
                     }
                 return false;
                 }
 
-                //run at a time_point time
+                //run at a time_point time ( not a 'now' based time )
                 //will only run 1 time unless task sets interval or runat
                 static auto
 insert          (taskFunc_t f, time_point tp)
                 {
-                remove( f ); //so we do not get multiple instances of function in tasks_
-                for( auto& t : tasks_ ){
-                    if( t.func ) continue;
-                    t.func = f;
-                    t.interval = 0;
-                    t.runat = tp;
-                    t.id = reinterpret_cast<u32>(f);
-                    return true;
-                    }
-                return false;
+                auto from_now = tp - now(); //convert to now based time
+                return insert(f, from_now); //so can resuse the above insert
                 }
 
                 }; //Tasks

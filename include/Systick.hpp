@@ -5,6 +5,7 @@
 #include <chrono>
 
 
+
 //........................................................................................
 
 ////////////////
@@ -139,6 +140,7 @@ public:
                 //also check if systick is on for the following function, so if you forget 
                 //to start systick it will be started for you
 
+                //this takes about ~110 cpu cycles
                 static time_point
 now             ()
                 {
@@ -161,7 +163,7 @@ delay           (duration d)
                     }
                 }
 
-                bool
+                static bool
 wasIrq          ()
                 {
                 InterruptLock lock;
@@ -192,12 +194,12 @@ operator<<      (FMT::Print& p, std::chrono::microseconds dur)
                 auto mi = duration_cast<minutes     >(dur); dur -= mi;
                 auto se = duration_cast<seconds     >(dur); dur -= se;
                 auto us = microseconds(dur);
-                return p << dec //decimal
-                        << setwf(4,' ') << da.count() << " "
-                        << setwf(2,'0') << hr.count() << ":"
-                        << setwf(2,'0') << mi.count() << ":"
-                        << setwf(2,'0') << se.count() << "."
-                        << setwf(6,'0') << us.count();                
+                return p
+                        << dec_(4,da.count()) << "d"
+                        << dec0(2,hr.count()) << ":"
+                        << dec0(2,mi.count()) << ":"
+                        << dec0(2,se.count()) << "."
+                        << dec0(6,us.count());                
                 }
 
                 inline FMT::Print&   

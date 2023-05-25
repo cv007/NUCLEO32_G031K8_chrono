@@ -14,19 +14,27 @@
 #include "MorseCode.hpp"
 #include "Lptim.hpp"
 
+//TODO
+//lptim only interrupts once every 2 seconds
+//need to add the compare irq which fires for the next soonest task
 
 //........................................................................................
-
+#if 0
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
-                using Task_t = Tasks_t::Task;       //single task type
-
                 static Systick systick;
-                static Tasks_t tasks;               //list of Task_t's
-                Board dev;
-
                 //alias names for easier use
                 auto& now = systick.now;            //returns a chrono::time_point
                 auto& delay = systick.delay;
+#else
+                using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Systick clock, max 16 tasks
+                static Lptim1ClockLSI lptim;
+                auto& now = lptim.now;            //returns a chrono::time_point
+                auto& delay = lptim.delay;
+#endif
+                using Task_t = Tasks_t::Task;       //single task type
+
+                static Tasks_t tasks;               //list of Task_t's
+                Board dev;
 
                 using namespace FMT;                //Print use
                 using namespace ANSI;               //FMT::ANSI
@@ -45,19 +53,14 @@
                     ~DebugPin(){ if constexpr( DEBUG_PIN ) dev.debugPin.off(); }
                 };
 
-                //create a u32 id from a type T (such as a function)
-                template<typename T> 
-                static constexpr auto
-makeID          (T t){ return reinterpret_cast<u32>(t); }
-
 //........................................................................................
 
                 static bool
 printTask       (Task_t& task)
                 {
-                auto uartp{ dev.uart.open(task.id) };
-                if( not uartp ) return false; //false=try again
-                auto& uart{ *uartp };
+                Own own{ dev.uart };                
+                if( not own.open() ) return false; //false = try again
+                auto& uart{ *own.dev() };
 
                 DebugPin dp;                
                 auto ti = task.interval + milliseconds(20);
@@ -68,12 +71,12 @@ printTask       (Task_t& task)
                 // , style (for << style just replace all , with <<
                 uart,
                     fg(WHITE*0.4), now().time_since_epoch(), space,
-                    fg(WHITE*0.4), "[", Hex0x(8,task.id), "] ",
+                    fg(WHITE*0.4), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
                     fg(50,90,150), dec_(5,n), space,
                     fg(GREEN*1.5), Hex0x(4,n), endl;
 
                 n++;
-                dev.uart.close( task.id );
+                own.close();
                 return true;
                 } //printTask
 
@@ -82,31 +85,31 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t& task)
                 {
-                auto uartp{ dev.uart.open(task.id) };
-                if( not uartp ) return false; //false=try again
-                auto& uart{ *uartp };
+                Own own{ dev.uart };                
+                if( not own.open() ) return false; //false = try again
+                auto& uart{ *own.dev() };
 
                 DebugPin dp;
                 auto r = random.read();
 
                 uart,
                     fg(WHITE), now().time_since_epoch(), space,
-                    fg(WHITE), "[", Hex0x(8,task.id), "] ",
+                    fg(WHITE), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
                     fg(20,200,255), "random ",
                     fg(20,255,200), Hex0x(8,r), space,
                     fg(50,75,200), "uart buffer max used: ", uart.bufferUsedMax(),
                         endl, FMT::reset, normal;
 
-                dev.uart.close( task.id );
+                own.close();
                 return true;
                 } //printRandom
 
-//........................................................................................
+
 
                 //interval used when adding to tasks is the DOT period
                 //all periods are based on the DOT period
                 static bool
-ledMorseCode    (Task_t& task)
+ledMorseCode    (Task_t&)
                 {
                 // "sos"
                 // 10101 000 11101110111 000 10101 0..
@@ -122,9 +125,9 @@ ledMorseCode    (Task_t& task)
                 static char nextc;
                 static bool isExtraSpacing;
 
-                auto ledp{ dev.led.open(task.id) };
-                if( not ledp ) return false;
-                auto& led{ *ledp };
+                static Own own{ dev.led };
+                if( not own.open() ) return false;
+                auto& led{ *own.dev() };
 
                 DebugPin dp;
 
@@ -149,6 +152,7 @@ ledMorseCode    (Task_t& task)
                     if( nextc == 0 ) binmask = 1<<(14-3-1);
                     isExtraSpacing = binmask;
                     } 
+                own.close();
                 return true;  
 
                 }; //LedTask
@@ -189,44 +193,22 @@ myInstanceNum   (SomeTasks* st)
                 bool
 run             (SomeTasks* st)
                 {
-                static int idx{ -1 }; //-1 will printer header
-                static const char* words[]{ "Hello", "World" };
+                Own own{ dev.uart };                
+                if( not own.open() ) return false; //false = try again
+                auto& uart{ *own.dev() };
 
-                auto id{ reinterpret_cast<u32>(st) };
-                auto uartp{ dev.uart.open(id) };
-                if( not uartp ) return false; //false=try again
-                auto& uart{ *uartp };
+                auto n = myInstanceNum(st); 
+                Rgb color{ random.read<u8>(10,255), 
+                            random.read<u8>(10,255), 
+                            static_cast<u8>(n*30) };
+                auto dur = now().time_since_epoch();
 
-                if( idx < 0 ){ 
-                    auto n = myInstanceNum(st); 
-                    Rgb color{ random.read<u8>(10,255), 
-                               random.read<u8>(10,255), 
-                               static_cast<u8>(n*30) };
-                    auto dur = now().time_since_epoch();
+                uart,
+                    fg(WHITE), dur, fg(color), 
+                    " [", Hex0x(8,reinterpret_cast<u32>(this)), dec,
+                    "][", n, "][", dec0(10,runCount_), "] Hello World", endl, normal;
 
-                    uart,
-                        fg(WHITE), dur, fg(color), 
-                        " [", Hex0x(8,reinterpret_cast<u32>(this)), dec,
-                        "][", n, "][", dec0(10,runCount_), "] ";
-
-                    idx++;
-                    return false;
-                    }
-
-                if( idx < arraySize(words) ){ 
-                    uart << words[idx++] << space; 
-                    return false; 
-                    }
-
-                if( idx++ < (arraySize(words) + 3) ){
-                    uart << dec0(3,random.read<u8>()) << space;
-                    return false;
-                    }
-
-                uart << endl;
-                idx = -1;
-                uart << normal;
-                dev.uart.close( id );
+                own.close();
                 runCount_++;  
                 st->task_.interval = milliseconds( random.read<u16>(500,2000) );
                 return true; //update interval
@@ -267,13 +249,13 @@ runAll          (Task_t&)
                 static inline bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                auto uartp{ dev.uart.open(task.id) };
-                if( not uartp ) return false; //false=try again
-                auto& uart{ *uartp };
+                Own own{ dev.uart };                
+                if( not own.open() ) return false; //false = try again
+                auto& uart{ *own.dev() };
 
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
-                    dev.uart.close( task.id ); //now release uart
+                    own.close();
                     return true; //this task gets deleted
                     }
 
@@ -292,12 +274,12 @@ showRandSeeds   (Task_t& task)
 
 //........................................................................................
 
-                static void
+                static inline void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                auto uartp{ dev.uart.open(makeID(timePrintu32)) };
-                if( not uartp ){ while(1){} }
-                auto& uart{ *uartp };
+                Own own{ dev.uart };                
+                if( not own.open() ) return;
+                auto& uart{ *own.dev() };
 
                 uint32_t v = 0xFFFFFFFF;
                 uart << bin; //set as needed
@@ -314,15 +296,23 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
                 int
 main            ()
                 {
+
                 //boot up code = 22 (in System.hpp)
-                //any use of 0 is an invalid code, so will get code 99 (invalid code)   
-                const auto id{ makeID(main) };
-                auto ledp = dev.led.open( id ); //should not fail, we are the first to use
-                if( ledp ){ 
-                    auto& led{ *ledp };
-                    led.infoCode( System::BOOT_CODE ); 
-                    dev.led.close( id );
+                Own own{ dev.led };
+                auto led{ own.open() };
+                if( led ){
+                    led->infoCode( System::BOOT_CODE ); 
+                    own.close();
                     }
+
+                // Own ownu{ dev.uart };                
+                // if( ownu.open() ){
+                //     auto& uart{ *ownu.dev() };
+                //     while(1){
+                //         uart, now().time_since_epoch(), endl;
+                //         delay( 50ms );
+                //         }
+                //     }
 
                 //systick started at first use (infoCode uses systick, so already started)
                 //restart systick after any clock speed changes
@@ -331,7 +321,7 @@ main            ()
                 //add tasks
 
                 //show Random seed values at boot to see if they look ok
-                //run now, run once (will hold onto the uart for 5s)
+                //run now, run once (will hold onto the uart for 5s so we have a chance to read it)
                 //tasks.insert( showRandSeeds ); 
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
@@ -339,11 +329,15 @@ main            ()
                 tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
                 tasks.insert( printRandom, 250ms );
 
+                //all tasks run in idle (not in an interrupt)
+                //so all tasks are interruptable, but not from other tasks
                 while(1){ 
-                    auto nextRunAt = tasks.run();
-                    while( nextRunAt > now() ){ 
-                        //continue loop only if we wake from systick irq
-                        while( not systick.wasIrq() ) CPU::waitIrq();
+                    auto nextRunAt = tasks.run(); //run returns time of next task
+                    while( nextRunAt > now() ){ //no need to run tasks until nextRunAt
+                        //no need to check time until the next systick irq
+                        //(other interrupts may be in use
+                        while( not Systick::wasIrq() ) CPU::waitIrq();
+                        // while( not lptim.wasIrq() ) CPU::waitIrq();
                         }
                     }
 

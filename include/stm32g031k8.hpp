@@ -95,6 +95,8 @@ lptim_t         = struct {
 Lptim1LSI       {   LPTIM1_BASE,
                     []{ //init
                         RCCreg.CSR = LSIONbm;
+RCCreg.APBRSTR1 or_eq RCC_LPTIM1ENbm;
+RCCreg.APBRSTR1 and_eq compl RCC_LPTIM1ENbm;
                         RCCreg.APBENR1 or_eq RCC_LPTIM1ENbm;
                         RCCreg.CCIPR = (RCCreg.CCIPR bitand compl (LPTIMSELbm<<LPTIM1SELbp)) bitor (1<<LPTIM1SELbp);
                         }, 
@@ -105,6 +107,8 @@ Lptim1LSI       {   LPTIM1_BASE,
 Lptim2LSI       {   LPTIM2_BASE,
                     []{ //init
                         RCCreg.CSR = LSIONbm;
+RCCreg.APBRSTR1 or_eq RCC_LPTIM2ENbm;
+RCCreg.APBRSTR1 and_eq compl RCC_LPTIM2ENbm;
                         RCCreg.APBENR1 or_eq RCC_LPTIM2ENbm;
                         RCCreg.CCIPR = (RCCreg.CCIPR bitand compl (LPTIMSELbm<<LPTIM2SELbp)) bitor (1<<LPTIM2SELbp);
                         },

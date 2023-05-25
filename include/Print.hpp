@@ -349,7 +349,7 @@ Hex0x           (int n, T v) { return {n,v}; }
                 template<typename T> inline Print&
                 operator<< (Print& p, PadH0xv<T> s) { return p << hex << uppercase << showbase << internal << setwf(s.n,'0') << s.v; }
 
-                // << decv(8,123)  -->>      123
+                // << dec_(8,123)  -->>      123
                 template<typename T> struct PadDv { int n; T v; };
                 template<typename T> inline PadDv<T> 
 dec_            (int n, T v) { return {n,v}; }
