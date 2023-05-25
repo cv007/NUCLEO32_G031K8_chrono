@@ -305,18 +305,12 @@ main            ()
                     own.close();
                     }
 
-                // Own ownu{ dev.uart };                
-                // if( ownu.open() ){
-                //     auto& uart{ *ownu.dev() };
-                //     while(1){
-                //         uart, now().time_since_epoch(), endl;
-                //         delay( 50ms );
-                //         }
-                //     }
-
                 //systick started at first use (infoCode uses systick, so already started)
                 //restart systick after any clock speed changes
-                //systick.restart();                
+                //systick.restart();  
+
+                //lptim always uses the same clock, but can use restart() to change
+                //its default interrupt priority
 
                 //add tasks
 
@@ -336,7 +330,12 @@ main            ()
                     while( nextRunAt > now() ){ //no need to run tasks until nextRunAt
                         //no need to check time until the next systick irq
                         //(other interrupts may be in use
+
+                        //currently using systick to check if a 'time' irq was run
+                        //(so we can go back to sleep if something like a uart irq)
                         while( not Systick::wasIrq() ) CPU::waitIrq();
+                        //cannot use lptim for this yet, since arr irq only fires every 2 seconds
+                        //need to add cmp irq, which is set to match next soonest task time
                         // while( not lptim.wasIrq() ) CPU::waitIrq();
                         }
                     }
