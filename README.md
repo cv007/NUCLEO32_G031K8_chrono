@@ -8,7 +8,7 @@ The interrupt rate is 1ms but can be changed as needed. As a chrono clock its re
 
 ### Lptim1ClockLSI class-
 
-The 'overflow' interrupt rate is 2 seconds (LPTIM counter is 16bits, uses 32kHz clock source), and the compare interrupt rate is ~1ms. As a chrono clock its resolution is ~30us and does not depend on the interrupt rate (the time is using the combined values of the overflow count and the lptim counter). This timer can/should use the compare irq to wake for the next soonest task, although it now simply uses the compare irq to wake the mcu which is similar to systick.
+The 'overflow' interrupt rate is 2 seconds (LPTIM counter is 16bits, uses 32kHz clock source), and the compare interrupt rate is ~1ms. As a chrono clock its resolution is ~30us and does not depend on the interrupt rate (the time is using the combined values of the overflow count and the lptim counter). This timer can/should use the compare irq to wake for the next soonest task, although it now simply uses the compare irq to wake the mcu at an interval of ~1ms which is similar to systick.
 
 
 
