@@ -44,12 +44,26 @@ Lptim1ClockLSI
                 static constexpr auto cyclesPerIrq_{ duration_irq::period::num * lsiHz_ / duration_irq::period::den };                
 
                 static void 
+compare         (u16 v){ reg_.CMP = v; }
+                static u16 
+compare         (){ return reg_.CMP; }
+
+                static void 
 isr             ()
                 {
                 auto flags = reg_.ISR;
                 reg_.ICR = flags;
-                if( flags bitand ARRbm ) atom_lsiCyclesTotal_ += cyclesPerIrq_;
-                if( flags bitand CMPbm ){}
+                if( flags bitand ARRbm ){
+                    atom_lsiCyclesTotal_ += cyclesPerIrq_;
+                    }
+                if( flags bitand CMPbm ){ 
+                    //setup for compare irq 1ms in future (32.768 lsi ticks)
+                    //(matches what systick is doing, but in this case we could
+                    // better set compare from the next soonest task to run, TODO)
+                    static u16 i,rem; 
+                    i += 32; rem += 768; if( rem >= 1000 ){ rem -= 768; i++; }  
+                    compare( i );               
+                    }
                 wasIrq_ = true;
                 }
 
@@ -98,8 +112,9 @@ restart         (Nvic::IRQ_PRIORITY irqPriority = DEFAULT_PRIORITY)
                 InterruptLock lock;
                 MCU::Lptim1LSI.init(); //also resets lptim via rcc
                 Nvic::setFunction( MCU::Lptim1LSI.irqn, isr, irqPriority_ );
-                reg_.IER = ARRbm; //IER can be set only when lptim disabled
+                reg_.IER = ARRbm bitor CMPbm; //IER can be set only when lptim disabled
                 reg_.CR = 1; //ENABLE (cannot combine with CNTSTRT)
+                compare(32);
                 reg_.CR or_eq 4; //CNTSTRT, can only bet set when lptim enabled
                 reg_.ARR = 0xFFFF; //ARR can be set only when lptim enabled
                 }
@@ -157,6 +172,7 @@ wasIrq          ()
                 }; // Lptim1ClockLSI
 
 //........................................................................................
+
 
 
 //........................................................................................

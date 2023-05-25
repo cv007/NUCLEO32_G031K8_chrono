@@ -15,22 +15,21 @@
 #include "Lptim.hpp"
 
 //TODO
-//lptim only interrupts once every 2 seconds
-//need to add the compare irq which fires for the next soonest task
+//need to set the lptim compare irq to fire for the next soonest task
+//(its now using compare to get an irq every ~1ms)
 
 //........................................................................................
 #if 0
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
-                static Systick systick;
-                //alias names for easier use
-                auto& now = systick.now;            //returns a chrono::time_point
-                auto& delay = systick.delay;
+                static Systick systimer;
 #else
                 using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Systick clock, max 16 tasks
-                static Lptim1ClockLSI lptim;
-                auto& now = lptim.now;            //returns a chrono::time_point
-                auto& delay = lptim.delay;
+                static Lptim1ClockLSI systimer;
 #endif
+                //alias names for easier use
+                auto& now = systimer.now;           //returns a chrono::time_point
+                auto& delay = systimer.delay;
+
                 using Task_t = Tasks_t::Task;       //single task type
 
                 static Tasks_t tasks;               //list of Task_t's
@@ -161,14 +160,18 @@ ledMorseCode    (Task_t&)
 
                 //a class with its own tasks, so we can duplicae a number of tasks
                 //to test handling the uart exclusively for each task
+                //each task prints a message split in 2 so carries ownership
+                //across 2 calls
+
 ////////////////
 class 
 SomeTasks       
 ////////////////
                 {
-                static inline SomeTasks* instances_[8];
+                static inline SomeTasks* instances_[16];
                 Task_t task_; //func unused
                 u32 runCount_;
+                Own<Uart> own_{ dev.uart };
 
                 bool
 insert          ()
@@ -193,23 +196,26 @@ myInstanceNum   (SomeTasks* st)
                 bool
 run             (SomeTasks* st)
                 {
-                Own own{ dev.uart };                
-                if( not own.open() ) return false; //false = try again
-                auto& uart{ *own.dev() };
+                if( not own_.open() ) return false;
+                auto& uart{ *own_.dev() };
 
                 auto n = myInstanceNum(st); 
                 Rgb color{ random.read<u8>(10,255), 
                             random.read<u8>(10,255), 
                             static_cast<u8>(n*30) };
                 auto dur = now().time_since_epoch();
+                runCount_++;
 
-                uart,
-                    fg(WHITE), dur, fg(color), 
-                    " [", Hex0x(8,reinterpret_cast<u32>(this)), dec,
-                    "][", n, "][", dec0(10,runCount_), "] Hello World", endl, normal;
+                if( runCount_ bitand 1 ){
+                    uart,
+                        fg(WHITE), dur, fg(color), 
+                        " [", Hex0x(8,reinterpret_cast<u32>(this)),
+                        "][", dec_(2,n), "][", dec0(10,runCount_);
+                    return false;
+                    }
+                uart, "] Hello World", endl, normal;
 
-                own.close();
-                runCount_++;  
+                own_.close();
                 st->task_.interval = milliseconds( random.read<u16>(500,2000) );
                 return true; //update interval
                 }
@@ -240,9 +246,7 @@ runAll          (Task_t&)
 
 //........................................................................................
 
-                //next interval set by each task to a random value so the default
-                //interval of 0 is ok here for all 8 tasks
-                SomeTasks someTasks[8];
+                SomeTasks someTasks[16];
 
 //........................................................................................
 
@@ -306,7 +310,7 @@ main            ()
                     }
 
                 //systick started at first use (infoCode uses systick, so already started)
-                //restart systick after any clock speed changes
+                //restart systick after any clock speed changes do it recomputes its values
                 //systick.restart();  
 
                 //lptim always uses the same clock, but can use restart() to change
@@ -331,12 +335,9 @@ main            ()
                         //no need to check time until the next systick irq
                         //(other interrupts may be in use
 
-                        //currently using systick to check if a 'time' irq was run
-                        //(so we can go back to sleep if something like a uart irq)
-                        while( not Systick::wasIrq() ) CPU::waitIrq();
-                        //cannot use lptim for this yet, since arr irq only fires every 2 seconds
-                        //need to add cmp irq, which is set to match next soonest task time
-                        // while( not lptim.wasIrq() ) CPU::waitIrq();
+                        //using wasIrq to check if a 'time' irq was run
+                        //(so we can go back to sleep if was something like a uart irq)
+                        while( not systimer.wasIrq() ) CPU::waitIrq();
                         }
                     }
 
