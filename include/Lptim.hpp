@@ -44,9 +44,10 @@ Lptim1ClockLSI
                 static constexpr auto cyclesPerIrq_{ duration_irq::period::num * lsiHz_ / duration_irq::period::den };                
 
                 static void 
-compare         (u16 v){ reg_.CMP = v; }
+compare         (u16 v){ reg_.ICR = CMPbm; reg_.CMP = v; } //clear flag first
                 static u16 
 compare         (){ return reg_.CMP; }
+
 
                 static void 
 isr             ()
@@ -60,17 +61,18 @@ isr             ()
                     //setup for compare irq 1ms in future (32.768 lsi ticks)
                     //(matches what systick is doing, but in this case we could
                     // better set compare from the next soonest task to run, TODO)
-                    static u16 i,rem; 
-                    i += 32; rem += 768; if( rem >= 1000 ){ rem -= 768; i++; }  
-                    compare( i );               
+                    // static u16 i,rem; 
+                    // i += 32; rem += 768; if( rem >= 1000 ){ rem -= 768; i++; }  
+                    // compare( i );   
+                    //TODO nextWake sets compare value
                     }
                 wasIrq_ = true;
                 }
 
-                static auto 
+                static u16 
 count           ()
                 {
-                u32 cnt;
+                u16 cnt;
                 //read twice, if both same is valid CNT value
                 while( cnt = reg_.CNT, cnt != reg_.CNT ){}
                 return cnt;
@@ -104,6 +106,11 @@ cycles2chrono   ()
                 auto cyc = lsiCycles();
                 return duration_chrono( cyc * duration_chrono::period::den / lsiHz_ );
                 }
+                static auto
+chrono2cycles   (duration_chrono d)
+                { 
+                return d.count() * lsiHz_ / duration_chrono::period::den;
+                }
 
                 static auto
 restart         (Nvic::IRQ_PRIORITY irqPriority = DEFAULT_PRIORITY)
@@ -114,8 +121,8 @@ restart         (Nvic::IRQ_PRIORITY irqPriority = DEFAULT_PRIORITY)
                 Nvic::setFunction( MCU::Lptim1LSI.irqn, isr, irqPriority_ );
                 reg_.IER = ARRbm bitor CMPbm; //IER can be set only when lptim disabled
                 reg_.CR = 1; //ENABLE (cannot combine with CNTSTRT)
-                compare(32);
-                reg_.CR or_eq 4; //CNTSTRT, can only bet set when lptim enabled
+                compare(32); //can only bet set when lptim enabled
+                reg_.CR or_eq 4; //CNTSTRT, can only be set when lptim enabled
                 reg_.ARR = 0xFFFF; //ARR can be set only when lptim enabled
                 }
 
@@ -167,6 +174,15 @@ wasIrq          ()
                 bool ret = wasIrq_;
                 wasIrq_ = false; 
                 return ret; 
+                }
+
+//in progress
+                static void 
+nextWakeup      (time_point t)
+                {
+                InterruptLock lock;
+                if( t <= now() ) compare( compare() + 1 );
+                else compare( chrono2cycles(t.time_since_epoch()) ); 
                 }
 
                 }; // Lptim1ClockLSI

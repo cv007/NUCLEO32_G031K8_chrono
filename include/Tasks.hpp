@@ -45,7 +45,8 @@ run             (Task& t, bool force = false)
                 auto tp = now(); //time_point
                 if( not force and (t.runat > tp) ) return;
                 if( not t.func( t ) ) return;
-                if( t.interval.count() > 0 ) t.runat = tp + t.interval;
+                // if( t.interval.count() > 0 ) t.runat = tp + t.interval;
+if( t.interval.count() > 0 ) t.runat += t.interval;
                 else if( t.runat <= tp ) remove( t.func );
                 //else runat was incremented by task
                 }

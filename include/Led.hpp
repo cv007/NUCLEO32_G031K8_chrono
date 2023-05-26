@@ -3,7 +3,7 @@
 #include "Util.hpp"
 #include "GpioPin.hpp"
 #include "Systick.hpp"
-
+#include "Lptim.hpp"
 
 //........................................................................................
 
@@ -13,8 +13,10 @@ Led             : GpioPin
 ////////////////               
                 {
 
-                static inline auto& delay = Systick::delay; //'alias' name
-                using duration = Systick::duration;
+                // static inline auto& delay = Systick::delay; //'alias' name
+                static inline auto& delay = Lptim1ClockLSI::delay; //'alias' name
+                // using duration = Systick::duration;
+                using duration = Lptim1ClockLSI::duration;
                 using milliseconds = std::chrono::milliseconds;
 public:
 

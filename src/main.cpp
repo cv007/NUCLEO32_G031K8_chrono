@@ -217,6 +217,7 @@ run             (SomeTasks* st)
 
                 own_.close();
                 st->task_.interval = milliseconds( random.read<u16>(500,2000) );
+                // st->task_.interval = milliseconds( 1000 );
                 return true; //update interval
                 }
 
@@ -323,14 +324,15 @@ main            ()
                 //tasks.insert( showRandSeeds ); 
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
-                tasks.insert( printTask, 500ms );
                 tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
-                tasks.insert( printRandom, 250ms );
+                tasks.insert( printTask, 500ms );
+                tasks.insert( printRandom, 4000ms );
 
                 //all tasks run in idle (not in an interrupt)
                 //so all tasks are interruptable, but not from other tasks
                 while(1){ 
                     auto nextRunAt = tasks.run(); //run returns time of next task
+systimer.nextWakeup( nextRunAt ); //code in progess
                     while( nextRunAt > now() ){ //no need to run tasks until nextRunAt
                         //no need to check time until the next systick irq
                         //(other interrupts may be in use
