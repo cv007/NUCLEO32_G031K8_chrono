@@ -1,5 +1,3 @@
-//........................................................................................
-
 ////////////////
 // main.cpp
 ////////////////
@@ -19,13 +17,14 @@
 //(its now using compare to get an irq every ~1ms)
 
 //........................................................................................
-#if 0
+                #if 0
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
                 static Systick systimer;
-#else
+                #else
                 using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Systick clock, max 16 tasks
                 static Lptim1ClockLSI systimer;
-#endif
+                #endif
+
                 //alias names for easier use
                 auto& now = systimer.now;           //returns a chrono::time_point
                 auto& delay = systimer.delay;
@@ -58,7 +57,7 @@
 printTask       (Task_t& task)
                 {
                 Own own{ dev.uart };                
-                if( not own.open() ) return false; //false = try again
+                if( not own ) return false; //false = try again
                 auto& uart{ *own.dev() };
 
                 DebugPin dp;                
@@ -85,7 +84,7 @@ printTask       (Task_t& task)
 printRandom     (Task_t& task)
                 {
                 Own own{ dev.uart };                
-                if( not own.open() ) return false; //false = try again
+                if( not own ) return false; //false = try again
                 auto& uart{ *own.dev() };
 
                 DebugPin dp;
@@ -125,7 +124,7 @@ ledMorseCode    (Task_t&)
                 static bool isExtraSpacing;
 
                 static Own own{ dev.led };
-                if( not own.open() ) return false;
+                if( not own ) return false;
                 auto& led{ *own.dev() };
 
                 DebugPin dp;
@@ -196,7 +195,7 @@ myInstanceNum   (SomeTasks* st)
                 bool
 run             (SomeTasks* st)
                 {
-                if( not own_.open() ) return false;
+                if( not own_ ) return false;
                 auto& uart{ *own_.dev() };
 
                 auto n = myInstanceNum(st); 
@@ -255,7 +254,7 @@ runAll          (Task_t&)
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
                 Own own{ dev.uart };                
-                if( not own.open() ) return false; //false = try again
+                if( not own ) return false; //false = try again
                 auto& uart{ *own.dev() };
 
                 if( task.interval != 0ms ){ //10s wait period done
@@ -283,7 +282,7 @@ showRandSeeds   (Task_t& task)
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
                 Own own{ dev.uart };                
-                if( not own.open() ) return;
+                if( not own ) return;
                 auto& uart{ *own.dev() };
 
                 uint32_t v = 0xFFFFFFFF;
@@ -304,9 +303,8 @@ main            ()
 
                 //boot up code = 22 (in System.hpp)
                 Own own{ dev.led };
-                auto led{ own.open() };
-                if( led ){
-                    led->infoCode( System::BOOT_CODE ); 
+                if( own ){
+                    own.dev()->infoCode( System::BOOT_CODE ); 
                     own.close();
                     }
 
@@ -344,5 +342,3 @@ systimer.nextWakeup( nextRunAt ); //code in progess
                     }
 
                 } //main
-
-
