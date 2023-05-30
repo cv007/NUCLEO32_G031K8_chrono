@@ -10,6 +10,7 @@ VIRTDIR := /media/owner/NOD_G031K8/
 
 # toolhchain
 GCC_PRE := arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi
+# GCC_PRE := gcc-arm-none-eabi-9-2020-q2-update/bin/arm-none-eabi
 CC  	:= $(GCC_PRE)-gcc
 CXX 	:= $(GCC_PRE)-g++
 OBJDUMP := $(GCC_PRE)-objdump
@@ -46,6 +47,7 @@ CFLAGS += --specs=nano.specs
 
 # C++ flags
 CXXFLAGS := $(CFLAGS)
+# CXXFLAGS += -std=c++17
 CXXFLAGS += -std=c++20
 CXXFLAGS += -funsigned-bitfields
 CXXFLAGS += -fno-exceptions
@@ -55,16 +57,17 @@ CXXFLAGS += -Wno-volatile #get rid of volatile warnings for c++20
 
 # linker flags
 LDFLAGS := -T$(LSCRIPT)
-LDFLAGS += --specs=nano.specs
+LDFLAGS += --specs=nano.specs 
+# LDFLAGS += --specs=nosys.specs
 LDFLAGS += -mcpu=cortex-m0plus
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS += -Wl,-Map=$(TARGETMAP)
 LDFLAGS += -fno-exceptions
-#will get undefined reference to `_sbrk' before the following lines takes effect
+#will get undefined reference to `_sbrk' before the following line takes effect
 #when using nano.specs, so probably not really needed
-#(intended to get compile time error if malloc/calloc happen to get brought in)
-LDFLAGS += -Wl,-wrap=malloc
-LDFLAGS += -Wl,-wrap=calloc
+#(intended to get compile time error if malloc happens to get brought in)
+LDFLAGS += -Wl,-wrap=_malloc_r
+
 
 # object list (to obj dir) based on all src files
 OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.cpp) )
