@@ -82,39 +82,27 @@ print           (const u32 v)
                 auto w = just_ == internal ? width_ : 0;        //use width_ here if internal justify
                 if( w ) width_ = 0;                             //if internal, clear width_ so not used when value printed
 
+                //buffer insert in reverse order (high bytes to low bytes)
                 auto insert = [&](char c){ buf[--idx] = c; };   //function to insert char to buf (idx decrementing)
-                auto internalFill = [&](){ while( w-- > 0 ) insert( fill_ ); }; //internal fill
 
-                switch( base_ ){ //bin,oct,hex use shifts, dec uses division
-                    case bin: 
-                        while( insert('0' + (u bitand 1)), w--, u >>= 1 ){} 
-                        internalFill();
-                        if(showbase_){ insert('b'); insert('0'); } //0b
-                        break;
-                    case oct:
-                        while( insert(ctbl[u bitand 7]), w--, u >>= 3 ){} 
-                        internalFill(); 
-                        if(showbase_ and v) insert('0'); //leading 0 unless v was 0
-                        break;
-                    case hex: 
-                        while( insert(ctbl[u bitand 15]), w--, u >>= 4 ){} 
-                        internalFill();
-                        if(showbase_){ insert('x'); insert('0'); } //0x
-                        break;
-                    default: //dec
-                        do{
-                            //group % / so compiler makes only 1 call to divmod
-                            u32 rem = u % base_; 
-                            u /= base_; 
-                            insert( ctbl[rem] ); 
-                            w--;
-                            } while( u );
-                        internalFill();
-                        if(isNeg_) insert('-'); else if(pos_) insert('+'); //- if negative, + if pos_ set and not 0
-                        break;
+                do{ //do at least once (u can be 0)
+                    //group % / so compiler makes only 1 call to divmod
+                    u32 rem = u % base_; u /= base_; 
+                    insert( ctbl[rem] ); 
+                    w--;
+                    } while( u );
+                while( w-- > 0 ) insert( fill_ ); //internal fill
+
+                switch( base_ ){
+                    case bin: if(showbase_){ insert('b'); insert('0'); } break; //0b
+                    case oct: if(showbase_ and v){ insert('0'); } break; //leading 0 unless v was 0
+                    case hex: if(showbase_){ insert('x'); insert('0'); } break; //0x
+                    case dec: //base_ is an enum, so should never get to default, but treat is as dec anyway
+                    default:  if(isNeg_) insert('-'); else if(pos_) insert('+'); //- if negative, + if pos_ set and not 0
                     }
                 return print( {&buf[idx], BUFSZ-idx} ); //call string_view version of print
                 }
+
 
                 //float, prints as string (to above string_view print function)
                 Print&
@@ -261,6 +249,9 @@ PrintNull       {}; //just a class type, nothing inside
                 // (nothing done, no code produced when optimized)
                 template<typename T> PrintNull& //anything passed in
 operator <<     (PrintNull& p, T){ return p; }
+
+                template<typename T> PrintNull& //anything passed in
+operator ,      (PrintNull& p, T){ return p; }
 
 //........................................................................................
 

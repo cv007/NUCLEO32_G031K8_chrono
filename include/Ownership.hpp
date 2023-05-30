@@ -85,14 +85,14 @@ close           (Descriptor od)
 
                 // own inside function only
                 //      Own own{ dev.uart };
-                //      if( not own.open() ) return;//device not available
+                //      if( not own ) return;       //device not available
                 //      auto& uart{ *own.dev() };   //convert pointer to reference if wanted
                 //      uart << "Hello" << endl;
                 //      own.close();                //give up ownership
 
                 // own beyond the function return
                 //      static Own own{ dev.uart };
-                //      if( not own.open() ) return;//device not available
+                //      if( not own ) return;       //device not available
                 //      auto& uart{ *own.dev() };   //convert pointer to reference if wanted
                 //      uart << "Hello" << endl;
                 //      own.close();                //give up ownership
@@ -110,26 +110,26 @@ public:
 Own             (ot_t& own) 
                 : own_(own) 
                 {
-                //do not open() here as we may not realize when constructor runs
-                //and may end up owning a device when not wanted
+                //constructor may run when not wanted if class object is static
+                //so do not attempt to own device here via dev()
+                //may end up owning a device when not wanted
                 }
 
                 T*
-dev             () const { return desc_.dev; }
-
-                T* 
-open            ()
+dev             ()
                 { 
-                if( not desc_.dev ) desc_ = own_.open(); 
-                return dev(); 
+                if( not desc_.dev ) desc_ = own_.open();
+                return desc_.dev; 
                 }
 
                 T* 
 close           ()
                 { 
                 if( desc_.dev ) desc_ = own_.close(desc_);
-                return dev();
+                return desc_.dev;
                 }
+
+operator bool   (){ return dev(); }
 
                 };
 
