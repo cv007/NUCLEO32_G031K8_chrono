@@ -12,9 +12,6 @@
 #include "MorseCode.hpp"
 #include "Lptim.hpp"
 
-//TODO
-//need to set the lptim compare irq to fire for the next soonest task
-//(its now using compare to get an irq every ~1ms)
 
 //........................................................................................
                 #if 0
@@ -342,3 +339,4 @@ systimer.nextWakeup( nextRunAt ); //code in progess
                     }
 
                 } //main
+
