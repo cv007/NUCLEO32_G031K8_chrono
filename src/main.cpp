@@ -1,3 +1,4 @@
+#if 1
 ////////////////
 // main.cpp
 ////////////////
@@ -14,11 +15,11 @@
 
 
 //........................................................................................
-                #if 0
+                #if 0 //using Lptim1ClockLSI
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
                 static Systick systimer;
                 #else
-                using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Systick clock, max 16 tasks
+                using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Lptim1ClockLSI clock, max 16 tasks
                 static Lptim1ClockLSI systimer;
                 #endif
 
@@ -29,7 +30,7 @@
                 using Task_t = Tasks_t::Task;       //single task type
 
                 static Tasks_t tasks;               //list of Task_t's
-                Board dev;
+                Board dev;                          //the only dev instance (extern in Boards)
 
                 using namespace FMT;                //Print use
                 using namespace ANSI;               //FMT::ANSI
@@ -340,3 +341,4 @@ systimer.nextWakeup( nextRunAt ); //code in progess
 
                 } //main
 
+#endif
