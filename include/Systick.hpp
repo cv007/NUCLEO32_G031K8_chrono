@@ -205,5 +205,12 @@ operator<<      (FMT::Print& p, std::chrono::microseconds dur)
                 inline FMT::Print&   
 operator,       (FMT::Print& p, std::chrono::microseconds dur){ return p << dur; }
 
+                template<typename T, typename D>
+                inline FMT::Print&   
+operator<<      (FMT::Print& p, std::chrono::time_point<T,D> tp){ return p << tp.time_since_epoch(); }
+
+                template<typename T, typename D>
+                inline FMT::Print&   
+operator,       (FMT::Print& p, std::chrono::time_point<T,D> tp){ return p << tp; }
 
 //........................................................................................
