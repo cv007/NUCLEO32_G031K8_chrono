@@ -66,7 +66,7 @@ printTask       (Task_t& task)
 
                 // , style (for << style just replace all , with <<
                 uart,
-                    fg(WHITE*0.4), now().time_since_epoch(), space,
+                    fg(WHITE*0.4), now(), space,
                     fg(WHITE*0.4), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
                     fg(50,90,150), dec_(5,n), space,
                     fg(GREEN*1.5), Hex0x(4,n), endl;
@@ -89,7 +89,7 @@ printRandom     (Task_t& task)
                 auto r = random.read();
 
                 uart,
-                    fg(WHITE), now().time_since_epoch(), space,
+                    fg(WHITE), now(), space,
                     fg(WHITE), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
                     fg(20,200,255), "random ",
                     fg(20,255,200), Hex0x(8,r), space,
@@ -200,12 +200,11 @@ run             (SomeTasks* st)
                 Rgb color{ random.read<u8>(10,255), 
                             random.read<u8>(10,255), 
                             static_cast<u8>(n*30) };
-                auto dur = now().time_since_epoch();
                 runCount_++;
 
                 if( runCount_ bitand 1 ){
                     uart,
-                        fg(WHITE), dur, fg(color), 
+                        fg(WHITE), now(), fg(color), 
                         " [", Hex0x(8,reinterpret_cast<u32>(this)),
                         "][", dec_(2,n), "][", dec0(10,runCount_);
                     return false;
