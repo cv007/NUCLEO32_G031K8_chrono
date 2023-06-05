@@ -13,7 +13,6 @@
 #include "MorseCode.hpp"
 #include "Lptim.hpp"
 
-
 //........................................................................................
                 #if 0 //using Lptim1ClockLSI
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
@@ -294,6 +293,26 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
 
 //........................................................................................
 
+                static bool
+printDouble     (Task_t&)
+                {
+                Own own{ dev.uart };                
+                if( not own ) return false; //false = try again
+                auto& uart{ *own.dev() };
+
+                static auto d{ 0.1 };
+                DebugPin dp;
+
+                uart,
+                    fg(WHITE), now(), space, "double: ", setwf(10,' '), setprecision(6), d, endl;
+                d = d*1.0001;
+
+                own.close();
+                return true;
+                } //printRandom
+
+//........................................................................................
+
                 int
 main            ()
                 {
@@ -305,9 +324,10 @@ main            ()
                     own.close();
                     }
 
-                //systick started at first use (infoCode uses systick, so already started)
-                //restart systick after any clock speed changes do it recomputes its values
-                //systick.restart();  
+                //systimer started at first use (infoCode uses systimer, so already started)
+                //restart systimer after any clock speed changes do it recomputes its values
+                //(if systimer depends on cpu speed, lptim based systimer have a fixed clock speed)
+                //systimer.restart(); //if using systick and cpu speed is changed
 
                 //lptim always uses the same clock, but can use restart() to change
                 //its default interrupt priority
@@ -315,13 +335,15 @@ main            ()
                 //add tasks
 
                 //show Random seed values at boot to see if they look ok
-                //run now, run once (will hold onto the uart for 5s so we have a chance to read it)
-                //tasks.insert( showRandSeeds ); 
+                //run now, run only once 
+                //(tasl will hold onto the uart for 5s so we have a chance to read the output)
+                // tasks.insert( showRandSeeds );
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
                 tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
                 tasks.insert( printTask, 500ms );
                 tasks.insert( printRandom, 4000ms );
+                tasks.insert( printDouble, 100ms );
 
                 //all tasks run in idle (not in an interrupt)
                 //so all tasks are interruptable, but not from other tasks
