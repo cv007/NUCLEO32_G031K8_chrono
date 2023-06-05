@@ -77,12 +77,13 @@ print           (const u32 v)
                 static constexpr u32 BUFSZ{ 32+2 };             //0bx...x-> 32+2 digits max (no 0 termination needed)
                 char buf[BUFSZ];                                //will be used as a string_view
                 u32 idx = BUFSZ;                                //start past end, so pre-decrement bufidx
-                const char* ctbl{ uppercase_ ? charTableUC : charTableLC };
+                const char* ctbl{ uppercase_ ? charTableUC : charTableLC }; //use uppercase or lowercase char table
                 auto u = v;                                     //make copy to use (v is const)
                 auto w = just_ == internal ? width_ : 0;        //use width_ here if internal justify
                 if( w ) width_ = 0;                             //if internal, clear width_ so not used when value printed
 
                 //buffer insert in reverse order (high bytes to low bytes)
+                //idx will not underflow, so no need to check idx before use
                 auto insert = [&](char c){ buf[--idx] = c; };   //function to insert char to buf (idx decrementing)
 
                 do{ //do at least once (u can be 0)
@@ -94,60 +95,87 @@ print           (const u32 v)
                 while( w-- > 0 ) insert( fill_ ); //internal fill
 
                 switch( base_ ){
-                    case bin: if(showbase_){ insert('b'); insert('0'); } break; //0b
-                    case oct: if(showbase_ and v){ insert('0'); } break; //leading 0 unless v was 0
-                    case hex: if(showbase_){ insert('x'); insert('0'); } break; //0x
-                    case dec: //base_ is an enum, so should never get to default, but treat is as dec anyway
-                    default:  if(isNeg_) insert('-'); else if(pos_) insert('+'); //- if negative, + if pos_ set and not 0
+                    case bin: if(showbase_)         { insert('b'); insert('0'); }   break; //0b
+                    case oct: if(showbase_ and v)   { insert('0'); }                break; //leading 0 unless v was 0
+                    case hex: if(showbase_)         { insert('x'); insert('0'); }   break; //0x
+                    //base_ is an enum so should not ever see default used, but just treat dec as default anyway so
+                    //everything is handled
+                    case dec:
+                    default:  if(isNeg_) insert('-'); else if(pos_ and v) insert('+');  //- if negative, + if pos_ set and not 0
                     }
                 return print( {&buf[idx], BUFSZ-idx} ); //call string_view version of print
                 }
 
 
-                //float, prints as string (to above string_view print function)
+                //double, prints integer part and decimal part separately as integers
                 Print&
-print           (const float cf)
+print           (const double cd)
                 {
+                static const char* errs[]{ "nan", "inf", "ovf" };
+                const char* perr{ nullptr };
                 //check for nan/inf
-                if( __builtin_isnan(cf) ) return print( uppercase_ ? "NAN" : "nan" );
-                if( __builtin_isinf_sign(cf) ) return print( uppercase_ ? "INF" : "inf" );
+                if( __builtin_isnan(cd) ) perr = errs[0];
+                else if( __builtin_isinf_sign(cd) ) perr = errs[1];
                 //we are limited by choice to using 32bit integers, so check for limits we can handle
                 //raw float value of 0x4F7FFFFF is 4294967040.0, and the next value we will exceed a 32bit integer
-                if( (cf > 4294967040.0) or (cf < -4294967040.0) ) return print( "ovf" );
-
-                //values used to get fractional part into integer, based on precision 1-9
-                static constexpr u32 mulTbl[PRECISION_MAX+1]
-                    { 1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000 };
-                static constexpr u32 BUFSZ{ 21 };           //10.10
-                char str[BUFSZ];                            //fill top to bottom (high to low)
-                u32 idx = BUFSZ;                            //top+1, since pre-decrementing
-                auto insert = [&](char c){ str[--idx] = c; }; //pre-decrement idx so is always pointing to start
-
-                auto pre = precision_;                      //copy
-                auto f = cf;                                //copy
-                if( f < 0.0 ){ isNeg_ = true; f = -f; }     //make positive if needed
-                auto fi = static_cast<u32>(f);              //fi = integer part
-
-                //deal with fractional part if precision is not 0
-                if( pre ){
-                    auto pw = mulTbl[pre];                  //table mul value to get desired fractional part moved up
-                    f = (f - fi) * pw;                      //f = desired fractional part moved up to integer
-                    auto i = static_cast<u32>(f);           //i = integer part of desired fraction
-                    f -= i;                                 //f now contains the remaining/unused fraction
-                    if( (f >= 0.5) and (++i >= pw) ){       //if need to round up- inc i, check for overflow (the table value)
-                        i = 0;                              //i overflow, set i to 0
-                        fi++;                               //propogate into (original) integer part
-                        }
-                    while( insert((i % 10) + '0'), i /= 10, --pre ){} //add each fractional digit
-                    insert('.');                            //add dp
+                else if( cd > 4294967040.0 or (cd < -4294967040.0) ) perr = errs[2];
+                if( perr ){
+                    width_ = 0;
+                    return print( perr ); 
                     }
 
-                //deal with integer part
-                while( insert((fi % 10) + '0'), fi /= 10 ){}//add each integer digit
-                if( isNeg_ ) insert('-');                   //if neg, now add '-'
-                else if( pos_ ) insert('+');                //if positive and pos wanted, add '+'
+                isNeg_ = cd < 0;                // set isNeg_ for first integer print
+                double d { isNeg_ ? -cd : cd }; // [d]ouble, copy cd, any negative value to positive
+                u32 di { static_cast<u32>(d) }; // [d]ouble_as_[i]nteger, integer part to print
+                double dd { d - di };           // [d]ouble[d]ecimal part
+                u32 i09 { 0 };                  // current integer digit of decimal part x10
+                auto pre { precision_ };        // a copy to decrement 
+                u32 ddi { 0 };                  // [d]ouble[d]ecimal_as[i]nteger, conversion of decimal part to integer
 
-                return print( {&str[idx], BUFSZ-idx} );     //call string_view version of print
+                //first print integer part, uses pos_/isNeg_/width_/just_
+                //second decimal part (also imteger) needs pos_=noshowbase,just_=right,width_=precision_,fill_='0'
+                //width_ and isNeg_ reset on each use, so no need to save/restore
+                auto base_save{ base_ };    base_ = dec;
+                auto justify_save{ just_ }; just_ = right;
+                auto pos_save = pos_;
+                auto save_fill = fill_;
+
+                //handle decimal part of float
+                while( pre-- ){                 //loop precision_ times
+                    dd *= 10;                   //shift each significant decimal digit into integer
+                    i09 = static_cast<u32>(dd); //integer 0-9
+                    ddi = ddi*10 + i09;         //shift in new integer to integer-decimal print value
+                    dd -= i09;                  //and remove the 0-9 integer (so only decimal remains)
+                    }
+
+                //apply rounding rules  
+                //  round up/nearest if >0.5 remains
+                //  round to nearest even value if 0.5 remains
+                if( dd > 0.5 ){
+                    if( precision_ ) ddi++;     //inc integer-decimal part
+                    else di++ ;                 //inc integer part if no decimals in use
+                    }
+                else if( dd == 0.5 ){
+                    if( precision_ ) ddi += i09 & 1;//make integer-decimal even based on last digit
+                    else di += di & 1;           //same, but on di since no decimals in use
+                    }
+
+                print( di );                   //print integer part of float
+
+                //if precision is not 0, print the decimal part of the float
+                if( precision_ ){
+                    print( '.' ); 
+                    pos_ = noshowpos;           //no +
+                    fill_ = '0';                //0 pad
+                    width_ = precision_;        //width same as precision (width_ always resets to 0 on each use)
+                    print( ddi );               //print decimal part as integer
+                    }
+
+                base_ = base_save;              //restore base_            
+                just_ = justify_save;           //restore just_
+                pos_ = pos_save;                //restore pos_
+                fill_ = save_fill;              //restore fill_   
+                return *this;
                 }
 
                 //reset all options to default (except newline), clear count
@@ -463,6 +491,12 @@ normal          };
                 inline Print&
                 operator<< (Print& p, NORMAL) { return not ANSI_ON ? p : p << "\033[0m"; }
 
+                //ansi normal
+                enum BOLD { 
+bold            };
+                inline Print&
+                operator<< (Print& p, BOLD) { return not ANSI_ON ? p : p << "\033[1m"; }
+
                 //ansi underline
                 enum UNDERLINE { 
 underline       };
@@ -632,5 +666,46 @@ operator *      (const Rgb& r, const double v)
                 } //namespace ANSI
 
                 } //namespace FMT
+
+//........................................................................................
+
+
+
+// additional types can either be added here
+// or can be added in source/header file where needed 
+// (will then need to #include "Print.hpp")
+//........................................................................................
+
+                //any std::chrono::time_point
+                // "  0dhh:mm:ss.ususus" d (day) is width 3, left space padded
+                // "  1d00:01:07.825696"
+                // "123d00:01:07.825696"
+                template<typename T, typename D>
+                inline FMT::Print&   
+operator<<      (FMT::Print& p, std::chrono::time_point<T,D> tp) //{ return p << tp.time_since_epoch(); }
+                {
+                using namespace std::chrono;
+                using namespace FMT;
+                auto dur = tp.time_since_epoch();
+                // < c++ 20, we have to make our own days
+                using days = duration<u32, std::ratio<24*60*60>>;
+                //need to explicitly cast when there is a loss in precision
+                auto da = duration_cast<days        >(dur); dur -= da;
+                auto hr = duration_cast<hours       >(dur); dur -= hr;
+                auto mi = duration_cast<minutes     >(dur); dur -= mi;
+                auto se = duration_cast<seconds     >(dur); dur -= se;
+                auto us = microseconds(dur);
+                return p
+                        << dec_(4,da.count()) << "d"
+                        << dec0(2,hr.count()) << ":"
+                        << dec0(2,mi.count()) << ":"
+                        << dec0(2,se.count()) << "."
+                        << dec0(6,us.count());                
+                }
+
+                // , syntax 'convert' to <<
+                template<typename T, typename D>
+                inline FMT::Print&   
+operator,       (FMT::Print& p, std::chrono::time_point<T,D> tp){ return p << tp; }
 
 //........................................................................................
