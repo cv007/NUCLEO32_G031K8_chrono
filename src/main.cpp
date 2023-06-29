@@ -1,4 +1,3 @@
-#if 1
 ////////////////
 // main.cpp
 ////////////////
@@ -53,9 +52,9 @@
                 static bool
 printTask       (Task_t& task)
                 {
-                Own own{ dev.uart };                
-                if( not own ) return false; //false = try again
-                auto& uart{ *own.dev() };
+                Open device{ dev.uart };                
+                if( not device ) return false; //false = try again
+                auto& uart{ *device.pointer() };
 
                 DebugPin dp;                
                 auto ti = task.interval + milliseconds(20);
@@ -71,7 +70,7 @@ printTask       (Task_t& task)
                     fg(GREEN*1.5), Hex0x(4,n), endl;
 
                 n++;
-                own.close();
+                device.close();
                 return true;
                 } //printTask
 
@@ -80,9 +79,9 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t& task)
                 {
-                Own own{ dev.uart };                
-                if( not own ) return false; //false = try again
-                auto& uart{ *own.dev() };
+                Open device{ dev.uart };                
+                if( not device ) return false; //false = try again
+                auto& uart{ *device.pointer() };
 
                 DebugPin dp;
                 auto r = random.read();
@@ -95,7 +94,7 @@ printRandom     (Task_t& task)
                     fg(50,75,200), "uart buffer max used: ", uart.bufferUsedMax(),
                         endl, FMT::reset, normal;
 
-                own.close();
+                device.close();
                 return true;
                 } //printRandom
 
@@ -120,9 +119,9 @@ ledMorseCode    (Task_t&)
                 static char nextc;
                 static bool isExtraSpacing;
 
-                static Own own{ dev.led };
-                if( not own ) return false;
-                auto& led{ *own.dev() };
+                static Open device{ dev.led };
+                if( not device ) return false;
+                auto& led{ *device.pointer() };
 
                 DebugPin dp;
 
@@ -147,7 +146,7 @@ ledMorseCode    (Task_t&)
                     if( nextc == 0 ) binmask = 1<<(14-3-1);
                     isExtraSpacing = binmask;
                     } 
-                own.close();
+                device.close();
                 return true;  
 
                 }; //LedTask
@@ -167,7 +166,7 @@ SomeTasks
                 static inline SomeTasks* instances_[16];
                 Task_t task_; //func unused
                 u32 runCount_;
-                Own<Uart> own_{ dev.uart };
+                Open<Uart> own_{ dev.uart };
 
                 bool
 insert          ()
@@ -193,7 +192,7 @@ myInstanceNum   (SomeTasks* st)
 run             (SomeTasks* st)
                 {
                 if( not own_ ) return false;
-                auto& uart{ *own_.dev() };
+                auto& uart{ *own_.pointer() };
 
                 auto n = myInstanceNum(st); 
                 Rgb color{ random.read<u8>(10,255), 
@@ -249,13 +248,13 @@ runAll          (Task_t&)
                 static inline bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                Own own{ dev.uart };                
-                if( not own ) return false; //false = try again
-                auto& uart{ *own.dev() };
+                Open device{ dev.uart };                
+                if( not device ) return false; //false = try again
+                auto& uart{ *device.pointer() };
 
                 if( task.interval != 0ms ){ //10s wait period done
                     task.interval = 0ms; //so task is deleted
-                    own.close();
+                    device.close();
                     return true; //this task gets deleted
                     }
 
@@ -277,9 +276,9 @@ showRandSeeds   (Task_t& task)
                 static inline void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                Own own{ dev.uart };                
-                if( not own ) return;
-                auto& uart{ *own.dev() };
+                Open device{ dev.uart };                
+                if( not device ) return;
+                auto& uart{ *device.pointer() };
 
                 uint32_t v = 0xFFFFFFFF;
                 uart << bin; //set as needed
@@ -296,9 +295,9 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
                 static bool
 printDouble     (Task_t&)
                 {
-                Own own{ dev.uart };                
-                if( not own ) return false; //false = try again
-                auto& uart{ *own.dev() };
+                Open device{ dev.uart };                
+                if( not device ) return false; //false = try again
+                auto& uart{ *device.pointer() };
 
                 static auto d{ 0.1 };
                 DebugPin dp;
@@ -307,21 +306,22 @@ printDouble     (Task_t&)
                     fg(WHITE), now(), space, "double: ", setwf(10,' '), setprecision(6), d, endl;
                 d = d*1.0001;
 
-                own.close();
+                device.close();
                 return true;
                 } //printRandom
 
 //........................................................................................
+
 
                 int
 main            ()
                 {
 
                 //boot up code = 22 (in System.hpp)
-                Own own{ dev.led };
-                if( own ){
-                    own.dev()->infoCode( System::BOOT_CODE ); 
-                    own.close();
+                Open device{ dev.led };
+                if( device ){
+                    device.pointer()->infoCode( System::BOOT_CODE ); 
+                    device.close();
                     }
 
                 //systimer started at first use (infoCode uses systimer, so already started)
@@ -339,17 +339,17 @@ main            ()
                 //(tasl will hold onto the uart for 5s so we have a chance to read the output)
                 // tasks.insert( showRandSeeds );
                 
-                tasks.insert( ledMorseCode, 80ms ); //interval is morse DOT length
+                tasks.insert( ledMorseCode, 80ms ); //interval is morse code DOT length
                 tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
                 tasks.insert( printTask, 500ms );
                 tasks.insert( printRandom, 4000ms );
-                tasks.insert( printDouble, 100ms );
+                // tasks.insert( printDouble, 100ms );
 
                 //all tasks run in idle (not in an interrupt)
                 //so all tasks are interruptable, but not from other tasks
                 while(1){ 
                     auto nextRunAt = tasks.run(); //run returns time of next task
-systimer.nextWakeup( nextRunAt ); //code in progess
+                    systimer.nextWakeup( nextRunAt ); //code in progess
                     while( nextRunAt > now() ){ //no need to run tasks until nextRunAt
                         //no need to check time until the next systick irq
                         //(other interrupts may be in use
@@ -362,4 +362,5 @@ systimer.nextWakeup( nextRunAt ); //code in progess
 
                 } //main
 
-#endif
+
+
