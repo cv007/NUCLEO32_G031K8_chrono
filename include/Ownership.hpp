@@ -9,7 +9,7 @@
 ////////////////
 template
 <typename T>    //device (device requires an isIdle() function- returns true when its 
-                //ready to take on a new owner, or simply returns true if not necessary
+                //ready to take on a new owner, or simply returns true
 class           
 Ownership
 ////////////////
@@ -29,9 +29,7 @@ Ownership       (T& dev)
                 : dev_( dev )
                 {}
 
-                //if no id passed in, this is a first time call
-                //if pass in id, caller has been here before and is simply calling
-                //this function because it previously
+                //if no id passed in, assume is not a current owner
                 Descriptor
 open            (u32 id = 0)
                 {
@@ -60,7 +58,7 @@ close           (Descriptor od)
 
 //........................................................................................
 
-                // without this class-
+                // without this helper class-
 
                 // own inside a function only
                 //      auto od{ dev.uart.open() };
@@ -83,31 +81,24 @@ close           (Descriptor od)
                 // using this class, using within the function or past the return are both the same,
                 // with only the addition of making Own static-
 
-                // own inside function only
-                //      Own own{ dev.uart };
-                //      if( not own ) return;       //device not available
-                //      auto& uart{ *own.dev() };   //convert pointer to reference if wanted
+                // own inside function only, or make Open static to retain ownership past the return
+                //      Open device{ dev.uart };            //static Open device{ dev.uart };
+                //      if( not device ) return;            //device not available
+                //      auto& uart{ *device.pointer() };    //convert pointer to reference if wanted
                 //      uart << "Hello" << endl;
-                //      own.close();                //give up ownership
-
-                // own beyond the function return
-                //      static Own own{ dev.uart };
-                //      if( not own ) return;       //device not available
-                //      auto& uart{ *own.dev() };   //convert pointer to reference if wanted
-                //      uart << "Hello" << endl;
-                //      own.close();                //give up ownership
+                //      device.close();                     //give up ownership
 
 template
 <typename T>
-class Own       {
+class Open      {
 
-                using od_t = Ownership<T>::Descriptor;
-                using ot_t = Ownership<T>;
-                od_t desc_{0,0};
-                ot_t& own_;
+                // using odesc_t = Ownership<T>::Descriptor;
+                // using ottype_t = Ownership<T>;
+                Ownership<T>::Descriptor desc_{0,0}; //u32 id; T* dev;
+                Ownership<T>& own_;
 public:
 
-Own             (ot_t& own) 
+Open            (Ownership<T>& own) 
                 : own_(own) 
                 {
                 //constructor may run when not wanted if class object is static
@@ -116,7 +107,7 @@ Own             (ot_t& own)
                 }
 
                 T*
-dev             ()
+pointer         ()
                 { 
                 if( not desc_.dev ) desc_ = own_.open();
                 return desc_.dev; 
@@ -129,8 +120,10 @@ close           ()
                 return desc_.dev;
                 }
 
-operator bool   (){ return dev(); }
+operator bool   (){ return pointer(); }
 
                 };
 
 //........................................................................................
+
+

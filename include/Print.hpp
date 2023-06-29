@@ -82,17 +82,18 @@ print           (const u32 v)
                 auto w = just_ == internal ? width_ : 0;        //use width_ here if internal justify
                 if( w ) width_ = 0;                             //if internal, clear width_ so not used when value printed
 
+                //function to insert char to buf (idx decrementing)
                 //buffer insert in reverse order (high bytes to low bytes)
-                //idx will not underflow, so no need to check idx before use
-                auto insert = [&](char c){ buf[--idx] = c; };   //function to insert char to buf (idx decrementing)
+                auto insert = [&](char c){ buf[--idx] = c; }; 
 
                 do{ //do at least once (u can be 0)
-                    //group % / so compiler makes only 1 call to divmod
+                    //group % / so compiler makes only 1 call to divmod (?)
                     u32 rem = u % base_; u /= base_; 
                     insert( ctbl[rem] ); 
                     w--;
                     } while( u );
-                while( w-- > 0 ) insert( fill_ ); //internal fill
+                //width_+internal justify could underflow buf, so limit width to allow for 2 more chars in buffer
+                while( w-- > 0 and (idx > 2) ) insert( fill_ ); //internal fill
 
                 switch( base_ ){
                     case bin: if(showbase_)         { insert('b'); insert('0'); }   break; //0b
@@ -442,30 +443,26 @@ ANSI
                 //all functions called in Print are public, so no need to 'friend' these
                 //enums also used to 'find' the specific operator<< when no values are needed
 
-                //ansi rgb (used by fg,bg - used without will not produce correct ansi codes)
+                //ansi rgb colors (used by fg,bg)
                 struct Rgb { u8 r; u8 g; u8 b; };
-                inline Rgb
-rgb             (u8 r, u8 g, u8 b){ return {r,g,b}; }
-                inline Print&
-                operator<< (Print& p, Rgb s) { return not ANSI_ON ? p : p << dec << s.r << ';' << s.g << ';' << s.b << 'm'; }
-                
+
                 //ansi fg(Rgb) or fg(r,g,b)
-                struct Fg { Rgb s; };
+                struct Fg { Rgb rgb; };
                 inline Fg 
 fg              (Rgb s) { return {s}; }
                 inline Fg 
 fg              (u8 r, u8 g, u8 b) { return { Rgb{r,g,b} }; }
                 inline Print& 
-                operator<< (Print& p, Fg s) { return not ANSI_ON ? p : p << "\033[38;2;" << s.s; }
+                operator<< (Print& p, Fg s) { return not ANSI_ON ? p : p << "\033[38;2;" << dec << s.rgb.r << ';' << s.rgb.g << ';' << s.rgb.b << 'm'; }
 
                 //ansi bg(Rgb) or bg(r,g,b)
-                struct Bg { Rgb s; };
+                struct Bg { Rgb rgb; };
                 inline Bg 
 bg              (Rgb s) { return {s}; }
                 inline Bg 
 bg              (u8 r, u8 g, u8 b) { return { Rgb{r,g,b} }; }
                 inline Print&
-                operator<< (Print& p, Bg s) { return not ANSI_ON ? p : p << "\033[48;2;" << s.s; }
+                operator<< (Print& p, Bg s) { return not ANSI_ON ? p : p << "\033[48;2;" << dec << s.rgb.r << ';' << s.rgb.g << ';' << s.rgb.b << 'm'; }
 
                 //ansi cls
                 enum CLS { 
