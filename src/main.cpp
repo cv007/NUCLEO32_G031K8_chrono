@@ -28,7 +28,7 @@
                 using Task_t = Tasks_t::Task;       //single task type
 
                 static Tasks_t tasks;               //list of Task_t's
-                Board dev;                          //the only dev instance (extern in Boards)
+                Board board;                        //the only board instance (extern in Boards)
 
                 using namespace FMT;                //Print use
                 using namespace ANSI;               //FMT::ANSI
@@ -43,8 +43,8 @@
                 // } //pin turns off at end of scope
                 static constexpr auto DEBUG_PIN{ true }; //false to disable
                 struct DebugPin {
-                    DebugPin(){ if constexpr( DEBUG_PIN ) dev.debugPin.on(); }
-                    ~DebugPin(){ if constexpr( DEBUG_PIN ) dev.debugPin.off(); }
+                    DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.on(); }
+                    ~DebugPin(){ if constexpr( DEBUG_PIN ) board.debugPin.off(); }
                 };
 
 //........................................................................................
@@ -52,7 +52,7 @@
                 static bool
 printTask       (Task_t& task)
                 {
-                Open device{ dev.uart };                
+                Open device{ board.uart };                
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
@@ -79,7 +79,7 @@ printTask       (Task_t& task)
                 static bool
 printRandom     (Task_t& task)
                 {
-                Open device{ dev.uart };                
+                Open device{ board.uart };                
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
@@ -119,7 +119,7 @@ ledMorseCode    (Task_t&)
                 static char nextc;
                 static bool isExtraSpacing;
 
-                static Open device{ dev.led };
+                static Open device{ board.led };
                 if( not device ) return false;
                 auto& led{ *device.pointer() };
 
@@ -166,7 +166,7 @@ SomeTasks
                 static inline SomeTasks* instances_[16];
                 Task_t task_; //func unused
                 u32 runCount_;
-                Open<Uart> own_{ dev.uart };
+                Open<Uart> own_{ board.uart };
 
                 bool
 insert          ()
@@ -248,7 +248,7 @@ runAll          (Task_t&)
                 static inline bool
 showRandSeeds   (Task_t& task)
                 { //run once, show 2 seed values use in Random (RandomGenLFSR16)
-                Open device{ dev.uart };                
+                Open device{ board.uart };                
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
@@ -276,16 +276,16 @@ showRandSeeds   (Task_t& task)
                 static inline void
 timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer)
                 {  //will assume we are the only function used, no return
-                Open device{ dev.uart };                
+                Open device{ board.uart };                
                 if( not device ) return;
                 auto& uart{ *device.pointer() };
 
                 uint32_t v = 0xFFFFFFFF;
                 uart << bin; //set as needed
                 while(1){
-                    dev.debugPin.on();
+                    board.debugPin.on();
                     uart << v; //dec 307us, hex 298us, oct 417, bin 693us
-                    dev.debugPin.off();
+                    board.debugPin.off();
                     delay( 20ms );
                     }
                 }
@@ -295,7 +295,7 @@ timePrintu32    () //test Print's u32 conversion speed (view with logic analyzer
                 static bool
 printDouble     (Task_t&)
                 {
-                Open device{ dev.uart };                
+                Open device{ board.uart };                
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
@@ -312,13 +312,25 @@ printDouble     (Task_t&)
 
 //........................................................................................
 
+                static bool
+checkRstPin     (Task_t&)
+                {                  
+                //nRST currently configured as GPIO mode in options byte (0b10)
+                //so just duplicating reset functionality via gpio pin 
+                //(not a true reset pin)
+                if( board.resetPin.isOn() ) CPU::Scb::swReset();
+                return true;
+                }
+
+//........................................................................................
+
 
                 int
 main            ()
                 {
 
                 //boot up code = 22 (in System.hpp)
-                Open device{ dev.led };
+                Open device{ board.led };
                 if( device ){
                     device.pointer()->infoCode( System::BOOT_CODE ); 
                     device.close();
@@ -343,6 +355,7 @@ main            ()
                 tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
                 tasks.insert( printTask, 500ms );
                 tasks.insert( printRandom, 4000ms );
+                tasks.insert( checkRstPin, 1000ms );
                 // tasks.insert( printDouble, 100ms );
 
                 //all tasks run in idle (not in an interrupt)
