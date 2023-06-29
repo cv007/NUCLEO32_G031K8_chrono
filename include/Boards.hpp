@@ -71,6 +71,10 @@ public:
                 //debug via pin, like to time various things via logic analyzer
                 GpioPin debugPin = GpioPin( D[2] ).mode( GpioPin::OUTPUT );
 
+                //nRST is set to GPIO in options byte, so duplicate nRST functionality
+                //(will require mcu running ok, so is not a true reset pin)
+                GpioPin resetPin = GpioPin( MCU::nRST, GpioPin::LOWISON ).mode( GpioPin::INPUT ).pull( GpioPin::PULLUP );
+
                 }; //Nucleo32g031
 
 //........................................................................................
@@ -84,6 +88,6 @@ public:
 
                 //and let everone know 'dev' will be the name to use for the single
                 //instace of Board created (in some source file)
-                extern Board dev;
+                extern Board board;
 
 //........................................................................................

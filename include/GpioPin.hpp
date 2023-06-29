@@ -72,6 +72,13 @@ altFunc         (MCU::ALTFUNC e)
                 return mode( ALTERNATE );
                 }
 
+                auto //read
+altFunc         ()
+                {
+                auto bp = pin_*4;
+                return MCU::ALTFUNC( (reg_.AFR>>bp) bitand 0xF );
+                }
+
                 //no interrupt protection needed for functions below, writes are using bssr/brr
 
                 //write

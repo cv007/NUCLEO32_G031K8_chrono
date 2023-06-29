@@ -47,6 +47,7 @@ PIN             { // 0bPPPPpppp P=port 0-n, p=pin 0-15, enum=port*16+p, port=enu
                 PB0, PB1, PB2, PB3, PB4, PB5, PB6, PB7,
                 PB8, PB9,
                 PC6 = (2*16)+6, PC14 = (2*16)+14, PC15,
+                PF2 = (5*16)+2, nRST = PF2,
                 //can exclude any pins above you wish to prevent using,
                 //or add an alias if wanted-
                 SWDIO = PA13, SWCLK = PA14
