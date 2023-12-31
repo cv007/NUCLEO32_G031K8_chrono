@@ -28,6 +28,7 @@ Uart
                 BufferBytes         buffer_;
                 Nvic::IRQ_PRIORITY  irqPriorty_;
                 MCU::IRQn           irqn_;
+                u32                 baud_;
 
                 enum { TEbm = 1<<3, UEbm = 1, TXEbm = 1<<7, TCbm = 1<<6 };
 
@@ -35,6 +36,8 @@ Uart
 txeIrqOn        () { reg_.CR1 = reg_.CR1 bitor TXEbm; }
                 auto
 txeIrqOff       () { reg_.CR1 = reg_.CR1 bitand compl TXEbm; }
+                auto
+txeIrqIsOff     () { return not (reg_.CR1 bitand TXEbm); }
                 auto
 txOn            () { reg_.CR1 = TEbm bitor UEbm; }
                 auto
@@ -78,20 +81,22 @@ isr             () override
                 { bufferTx(); }
 
                 auto
-baud            (u32 baudVal)
+baud            ()
                 { //default 16 sample rate
                 //most likely any normal baud rate will fall within the brr available 16bits 
                 //but if not, the user will find out (uart will not work as intended)
                 //(if baud too high or low for cpu clock in use, will not get desired baud rate)
-                auto v = System::cpuHz()/baudVal;
-                if( v > 0xFFFF ) v = 0xFFFF;
+                auto v = System::cpuHz()/baud_;
                 reg_.BRR = v; 
                 }
 
 public:
 
                 auto
-isIdle          (){ return buffer_.isEmpty() and isTxComplete(); }
+cpuSpeedUpdate  (){ baud(); }
+
+                auto
+isIdle          (){ return txeIrqIsOff() and isTxComplete(); }
 
                 virtual bool
 write           (const char c){ return writeBuffer(c); }
@@ -114,14 +119,12 @@ Uart            (MCU::uart_t u, u32 baudVal, std::array<u8,N>& buffer, Nvic::IRQ
                 : reg_( *(reinterpret_cast<Reg*>(u.addr)) ),
                   buffer_( buffer ),
                   irqPriorty_( irqPriority ),
-                  irqn_( u.irqn )
+                  irqn_( u.irqn ),
+                  baud_( baudVal )
                 {
                 { InterruptLock lock; u.init(); } //rcc
-                GpioPin(u.txPin)
-                    .mode(GpioPin::INPUT)   //first set default state if/when tx not enabled
-                    .pull(GpioPin::PULLUP)  //input, pullup (tx idle state)
-                    .altFunc( u.txAltFunc); //now set pin to uart tx fnction
-                baud( baudVal );
+                GpioPin(u.txPin).alternate( u.txAltFunc );
+                baud();
                 Nvic::setFunction( irqn_, this, irqPriorty_ );
                 txOn();
                 }

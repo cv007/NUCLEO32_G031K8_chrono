@@ -80,7 +80,10 @@ print           (const u32 v)
                 const char* ctbl{ uppercase_ ? charTableUC : charTableLC }; //use uppercase or lowercase char table
                 auto u = v;                                     //make copy to use (v is const)
                 auto w = just_ == internal ? width_ : 0;        //use width_ here if internal justify
-                if( w ) width_ = 0;                             //if internal, clear width_ so not used when value printed
+                if( w ){
+                    width_ = 0;                                 //if internal, clear width_ so not used when value printed
+                    just_ = right;                              //reset just_ if internal (so no need to reset in other code)
+                    }                                           //(don't see where it would ever be useful to leave as internal)
 
                 //function to insert char to buf (idx decrementing)
                 //buffer insert in reverse order (high bytes to low bytes)

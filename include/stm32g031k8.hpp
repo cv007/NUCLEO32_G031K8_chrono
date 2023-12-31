@@ -75,7 +75,7 @@ uart_t          = struct {
                     IRQn        irqn;
                     };
 
-                //Uart2, TX=PA2,RX=PA3
+                //Uart2, TX=PA2,RX=PA3, HSI16
                 static constexpr uart_t
 Uart2_A2A3      {   USART2_BASE,    //Usart2 base address
                     PA2, AF1,       //tx pin, alt function

@@ -63,22 +63,36 @@ operator =      (const T v)
                 }  
 
                 //prefix ++ / --
-                T       operator ++     ()          { InterruptLock lock; return ++value;    }
-                T       operator --     ()          { InterruptLock lock; return --value;    }
+                T       
+operator ++     () { InterruptLock lock; return ++value; }
+                T       
+operator --     () { InterruptLock lock; return --value; }
                 //postfix ++ / -- (returns pre inc/dec value)
-                T       operator ++     (const int) { InterruptLock lock; T v = value++; return v; }
-                T       operator --     (const int) { InterruptLock lock; T v = value--; return v; }
+                T       
+operator ++     (const int) { InterruptLock lock; T v = value++; return v; }
+                T       
+operator --     (const int) { InterruptLock lock; T v = value--; return v; }
                 //other writes
-                T       operator +=     (const T v) { InterruptLock lock; return value += v;  }
-                T       operator -=     (const T v) { InterruptLock lock; return value -= v;  }
-                T       operator *=     (const T v) { InterruptLock lock; return value *= v;  }
-                T       operator /=     (const T v) { InterruptLock lock; return value /= v;  }
-                T       operator %=     (const T v) { InterruptLock lock; return value %= v;  }
-                T       operator ^=     (const T v) { InterruptLock lock; return value ^= v;  }
-                T       operator &=     (const T v) { InterruptLock lock; return value &= v;  }
-                T       operator |=     (const T v) { InterruptLock lock; return value |= v;  }
-                T       operator >>=    (const T v) { InterruptLock lock; return value >>= v; }
-                T       operator <<=    (const T v) { InterruptLock lock; return value <<= v; }
+                T       
+operator +=     (const T v) { InterruptLock lock; return value += v; }
+                T       
+operator -=     (const T v) { InterruptLock lock; return value -= v; }
+                T       
+operator *=     (const T v) { InterruptLock lock; return value *= v; }
+                T       
+operator /=     (const T v) { InterruptLock lock; return value /= v; }
+                T       
+operator %=     (const T v) { InterruptLock lock; return value %= v; }
+                T       
+operator ^=     (const T v) { InterruptLock lock; return value ^= v; }
+                T       
+operator &=     (const T v) { InterruptLock lock; return value &= v; }
+                T       
+operator |=     (const T v) { InterruptLock lock; return value |= v; }
+                T       
+operator >>=    (const T v) { InterruptLock lock; return value >>= v; }
+                T       
+operator <<=    (const T v) { InterruptLock lock; return value <<= v; }
 
                 //atomic clear mask, then set mask
                 //caller responsible for getting both arguments correct

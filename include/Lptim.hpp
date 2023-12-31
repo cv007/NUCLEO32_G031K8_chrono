@@ -52,21 +52,16 @@ compare         (){ return reg_.CMP; }
                 static void 
 isr             ()
                 {
+                InterruptLock lock;
                 auto flags = reg_.ISR;
                 reg_.ICR = flags;
-                if( flags bitand ARRbm ){
-                    atom_lsiCyclesTotal_ += cyclesPerIrq_;
+                if( flags bitand ARRbm ){ //overflow
+                    atom_lsiCyclesTotal_.value += cyclesPerIrq_;  
+                    wasIrq_ = true;                  
                     }
-                if( flags bitand CMPbm ){ 
-                    //setup for compare irq 1ms in future (32.768 lsi ticks)
-                    //(matches what systick is doing, but in this case we could
-                    // better set compare from the next soonest task to run, TODO)
-                    // static u16 i,rem; 
-                    // i += 32; rem += 768; if( rem >= 1000 ){ rem -= 768; i++; }  
-                    // compare( i );   
-                    //TODO nextWake sets compare value
-                    }
-                wasIrq_ = true;
+                if( flags bitand CMPbm ){ //compare (used just to wakeup and set wasIrq_)
+                    wasIrq_ = true; 
+                    }              
                 }
 
                 static u16 
@@ -78,24 +73,22 @@ count           ()
                 return cnt;
                 }
 
-                //could be called with irq's disabled, so cannot assume atom_lsiCyclesTotal_ 
-                //will be updated if arr irq occurred
+                //could be called with irq's disabled
                 static i64
 lsiCycles       ()
                 {
-                InterruptLock lock;             //simpler to just protect the whole function
-                auto counter = count();         //hardware. always changing
-                //since irq's are aready off, skip the protection for atom_lsiCyclesTotal_
-                //which is AtomRW type
-                auto total = atom_lsiCyclesTotal_.value; //irq's are off, not changing
-                if( reg_.ISR bitand ARRbm ){    //if arr flag is set
-                    counter = count();          //read cnt again
-                    total += cyclesPerIrq_;     //account for missed irq
-                    //leave  flag set so isr will still run (we only updated our local
-                    //copy of atom_lsiCyclesTotal_)
-                    }
-                return total + counter;         //total lsi cycles since lptim started
+                InterruptLock lock;
+                //irq's are off, but lptim hardware counter still increments
+                //first check irq flag in case irq already missed (if irq's were off when called)
+                isr(); //run isr manually (nothing done if no irq flags set)
+                //total is correct now, get lptim count twice and check if overflow
+                //(not likely, but is possible if somehow called with irq's off for a period longer than lptim period)
+                //(so returned time will be valid up to 2
+                u16 counter;
+                while( counter = count(), counter > count() ) isr();
+                return atom_lsiCyclesTotal_.value + counter; //total lsi cycles since lptim started
                 }
+
 
                 //lsi cycles to chrono duration (duration_chrono)
                 //ratio's used for this chrono clock are always <num=1,den=n>,
@@ -121,7 +114,7 @@ restart         (Nvic::IRQ_PRIORITY irqPriority = DEFAULT_PRIORITY)
                 Nvic::setFunction( MCU::Lptim1LSI.irqn, isr, irqPriority_ );
                 reg_.IER = ARRbm bitor CMPbm; //IER can be set only when lptim disabled
                 reg_.CR = 1; //ENABLE (cannot combine with CNTSTRT)
-                compare(32); //can only bet set when lptim enabled
+                compare(32); //can only be set when lptim enabled
                 reg_.CR or_eq 4; //CNTSTRT, can only be set when lptim enabled
                 reg_.ARR = 0xFFFF; //ARR can be set only when lptim enabled
                 }
@@ -181,7 +174,11 @@ wasIrq          ()
 nextWakeup      (time_point t)
                 {
                 InterruptLock lock;
-                if( t <= now() ) compare( compare() + 1 );
+                //if time already passed, set wasIrq_ and clear compare flag
+                if( t <= now() ){        
+                    wasIrq_ = true;     //set wasIrq_
+                    //just leave compare unchanged
+                    }
                 else compare( chrono2cycles(t.time_since_epoch()) ); 
                 }
 

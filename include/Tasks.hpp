@@ -44,10 +44,10 @@ run             (Task& t, bool force = false)
                 if( not t.func ) return;
                 auto tp = now(); //time_point
                 if( not force and (t.runat > tp) ) return;
-                if( not t.func( t ) ) return;
+                if( not t.func( t ) ) return; //returned false, keep same runat time
                 // if( t.interval.count() > 0 ) t.runat = tp + t.interval;
-if( t.interval.count() > 0 ) t.runat += t.interval;
-                else if( t.runat <= tp ) remove( t.func );
+if( t.interval.count() > 0 ) t.runat += t.interval; //based on previous runat time
+                else if( t.runat <= tp ) t.func = 0; //remove( t.func );
                 //else runat was incremented by task
                 }
 
@@ -88,8 +88,9 @@ remove          (taskFunc_t f)
                 for( auto& t : tasks_ ){
                     if( t.func != f ) continue;
                     t.func = 0;
-                    return;
+                    return true;
                     }
+                return false;
                 }
 
                 //if interval is 0- task runs right away and

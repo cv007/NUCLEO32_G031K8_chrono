@@ -23,16 +23,21 @@ public:
 Led             (MCU::PIN pin, INVERT inv = HIGHISON)
                 : GpioPin(pin,inv)
                 {
-                off().mode(OUTPUT); //off before output, so no glitch if inverted
+                output(); //will also start in off state
                 }
 
                 //only these GpioPin functions allowed
                 using 
-GpioPin::on,    
-GpioPin::off, 
-GpioPin::toggle,
-GpioPin::isOn, 
-GpioPin::isOff;
+                GpioPin::
+on,    
+                GpioPin::
+off, 
+                GpioPin::
+toggle,
+                GpioPin::
+isOn, 
+                GpioPin::
+isOff;
 
                 //on+off duration (1 blink), n times (1-255)
                 void

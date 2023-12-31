@@ -48,13 +48,12 @@ private:        //not directly accessible
                 //      uart << "Hello World" << endl; //use
                 //      board.uart.release( id ); //release ownership
 
-                //fixed green led- LD3
-                Led led_{ MCU::PC6 };
-
 public:
 
+                //fixed green led- LD3 (no Ownership)
+                Led led{ MCU::PC6 };
+
                 Ownership<Uart> uart{ uart_ };
-                Ownership<Led> led{ led_ };
 
                 //board pin labels to actual pins
                 static constexpr MCU::PIN D[]{ //0-12
@@ -68,12 +67,12 @@ public:
                     MCU::PA12, MCU::PA11, MCU::PA6, MCU::PA7
                     };
 
-                //debug via pin, like to time various things via logic analyzer
-                GpioPin debugPin = GpioPin( D[2] ).mode( GpioPin::OUTPUT );
+                //debug via pin, like to time various things via logic analyzer                
+                GpioPin debugPin = GpioPin( D[2] ).output();
 
                 //nRST is set to GPIO in options byte, so duplicate nRST functionality
                 //(will require mcu running ok, so is not a true reset pin)
-                GpioPin resetPin = GpioPin( MCU::nRST, GpioPin::LOWISON ).mode( GpioPin::INPUT ).pull( GpioPin::PULLUP );
+                GpioPin resetPin = GpioPin( MCU::nRST, GpioPin::LOWISON ).input( GpioPin::PULLUP );
 
                 }; //Nucleo32g031
 
