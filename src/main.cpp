@@ -12,11 +12,12 @@
 #include "MorseCode.hpp"
 #include "Lptim.hpp"
 
+
 //........................................................................................
-                #if 0 //using Lptim1ClockLSI
+                #if 0 //using Systick
                 using Tasks_t = Tasks<Systick,16>;  //using Systick clock, max 16 tasks
                 static Systick systimer;
-                #else
+                #else //using Lptim1ClockLSI
                 using Tasks_t = Tasks<Lptim1ClockLSI,16>;  //using Lptim1ClockLSI clock, max 16 tasks
                 static Lptim1ClockLSI systimer;
                 #endif
@@ -56,18 +57,27 @@ printTask       (Task_t& task)
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
+auto t = now();
+auto tdly = (t - task.runat).count();
+static Systick::rep max_tdly = 0, min_tdly = 1000000;
+if( tdly > max_tdly ) max_tdly = tdly;
+if( tdly < min_tdly ) min_tdly = tdly;
+
                 DebugPin dp;                
-                auto ti = task.interval + milliseconds(20);
-                if( ti > milliseconds(600) ) ti = milliseconds(400);
-                task.interval = ti; //set new interval
+                // auto ti = task.interval + milliseconds(20);
+                // if( ti > milliseconds(600) ) ti = milliseconds(400);
+                // task.interval = ti; //set new interval
+                auto new_interval = random.read<u16>(10,99);
+                task.interval = milliseconds( new_interval );
                 static u16 n = 0;
 
                 // , style (for << style just replace all , with <<
                 uart,
-                    fg(WHITE*0.4), now(), space,
-                    fg(WHITE*0.4), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
-                    fg(50,90,150), dec_(5,n), space,
-                    fg(GREEN*1.5), Hex0x(4,n), endl;
+                    fg(WHITE), t, 
+                    fg(GREEN), " [printTask][", Hex0x(8,reinterpret_cast<u32>(task.func)), ']',
+                    fg(WHITE*0.4), " us late: ", dec_(6,tdly), '[', min_tdly, '/', max_tdly, ']',
+                    fg(50,90,150), " run count: ", dec_(5,n), '[', Hex0x(4,n), ']', 
+                    fg(BLUE*1.5), " new interval: ", new_interval, endl;
 
                 n++;
                 device.close();
@@ -83,15 +93,21 @@ printRandom     (Task_t& task)
                 if( not device ) return false; //false = try again
                 auto& uart{ *device.pointer() };
 
+auto t = now();
+auto tdly = (t - task.runat).count();
+static Systick::rep max_tdly = 0, min_tdly = 1000000;
+if( tdly > max_tdly ) max_tdly = tdly;
+if( tdly < min_tdly ) min_tdly = tdly;
+
                 DebugPin dp;
                 auto r = random.read();
 
                 uart,
-                    fg(WHITE), now(), space,
-                    fg(WHITE), "[", Hex0x(8,reinterpret_cast<u32>(task.func)), "] ",
-                    fg(20,200,255), "random ",
-                    fg(20,255,200), Hex0x(8,r), space,
-                    fg(50,75,200), "uart buffer max used: ", uart.bufferUsedMax(),
+                    fg(WHITE), t, " [printRandom[", Hex0x(8,reinterpret_cast<u32>(task.func)), ']',
+                    fg(WHITE*0.4), " us late: ", dec_(6,tdly), '[', min_tdly, '/', max_tdly, ']',
+                    fg(20,200,255), " random: ",
+                    fg(20,255,200), Hex0x(8,r),
+                    fg(50,75,200), " uart buffer max used: ", uart.bufferUsedMax(),
                         endl, FMT::reset, normal;
 
                 device.close();
@@ -119,10 +135,6 @@ ledMorseCode    (Task_t&)
                 static char nextc;
                 static bool isExtraSpacing;
 
-                static Open device{ board.led };
-                if( not device ) return false;
-                auto& led{ *device.pointer() };
-
                 DebugPin dp;
 
                 if( binmask == 0 ){ 
@@ -135,7 +147,7 @@ ledMorseCode    (Task_t&)
                     isExtraSpacing = false;
                     }
                 
-                led.on( bin bitand binmask );                 
+                board.led.on( bin bitand binmask );                 
                 binmask >>= 1;
                 if( binmask == 0 and not isExtraSpacing ){
                     //the morse char includes the 3 off periods between chars
@@ -146,102 +158,56 @@ ledMorseCode    (Task_t&)
                     if( nextc == 0 ) binmask = 1<<(14-3-1);
                     isExtraSpacing = binmask;
                     } 
-                device.close();
+
                 return true;  
 
                 }; //LedTask
 
 //........................................................................................
 
-                //a class with its own tasks, so we can duplicae a number of tasks
-                //to test handling the uart exclusively for each task
-                //each task prints a message split in 2 so carries ownership
-                //across 2 calls
-
 ////////////////
 class 
-SomeTasks       
+Atask
 ////////////////
                 {
-                static inline SomeTasks* instances_[16];
-                Task_t task_; //func unused
-                u32 runCount_;
-                Open<Uart> own_{ board.uart };
-
-                bool
-insert          ()
-                {
-                for( auto& i : instances_ ){
-                    if( i ) continue;
-                    i = this;
-                    return true;
-                    }
-                return false;
-                }
-
-                auto
-myInstanceNum   (SomeTasks* st)
-                {
-                for( auto i = 0; i < arraySize(instances_); i++ ){
-                    if( st == instances_[i] ) return i;
-                    }
-                return arraySize(instances_); //not possible
-                }
-
-                bool
-run             (SomeTasks* st)
-                {
-                if( not own_ ) return false;
-                auto& uart{ *own_.pointer() };
-
-                auto n = myInstanceNum(st); 
-                Rgb color{ random.read<u8>(10,255), 
-                            random.read<u8>(10,255), 
-                            static_cast<u8>(n*30) };
-                runCount_++;
-
-                if( runCount_ bitand 1 ){
-                    uart,
-                        fg(WHITE), now(), fg(color), 
-                        " [", Hex0x(8,reinterpret_cast<u32>(this)),
-                        "][", dec_(2,n), "][", dec0(10,runCount_);
-                    return false;
-                    }
-                uart, "] Hello World", endl, normal;
-
-                own_.close();
-                st->task_.interval = milliseconds( random.read<u16>(500,2000) );
-                // st->task_.interval = milliseconds( 1000 );
-                return true; //update interval
-                }
+                u32 runCount_{ 0 };
+                Open<Uart> device_{ board.uart };
+                u32 openFailCount_{ 0 };
 
 public:
 
-SomeTasks       (microseconds interval = 0ms)
-                {
-                task_.interval = interval;
-                insert();
-                }
-
-                static bool
-runAll          (Task_t&)
-                {
-                DebugPin dp;
-                for( auto& st : instances_ ){
-                    if( not st ) continue;
-                    auto tp = now();
-                    if( tp < st->task_.runat ) continue;
-                    if( st->run(st) ) st->task_.runat = tp + st->task_.interval;
+                bool
+run             (Task_t& task)
+                {                            
+                if( not device_ ){
+                    openFailCount_++;
+                    return false; //false = try again
                     }
-                return true;
+                auto& uart{ *device_.pointer() };
+
+
+                Rgb color{ random.read<u8>(10,255), 
+                            random.read<u8>(10,255), 
+                            128 };
+
+                ++runCount_;
+                //if( runCount_ bitand 1 ){
+auto t = now();
+auto tdly = (t - task.runat).count();
+                    uart,
+                        fg(WHITE), t, space, dec_(6,tdly), fg(color), 
+                        " [", Hex0x(8,reinterpret_cast<u32>(this)),
+                        "][", dec0(10,runCount_), "][", dec0(10,openFailCount_);
+                    //return false;
+                    //}
+                uart, "] Hello World", endl, normal;
+
+                device_.close();
+                task.interval = milliseconds( random.read<u16>(100,500) );
+                return true; //update interval
                 }
 
-                }; //SomeTasks
-
-
-//........................................................................................
-
-                SomeTasks someTasks[16];
+                }; //Atask
 
 //........................................................................................
 
@@ -324,18 +290,55 @@ checkRstPin     (Task_t&)
 
 //........................................................................................
 
+                static void
+clockInit       ()
+                {
+                // 64 MHz via PLL
+                MCU::RCCreg.PLLCFGR = 
+                    (1<<29) bitor // PLLR /2
+                    (1<<28) bitor // PLLREN
+                    (16<<8) bitor // PLLN = 16 //mul factor 8-86  // freqIn x (N/M)
+                    ((2-1)<<4) bitor // PLLM = 2 //div factor 1-8 (0-7)
+                    2 bitor // PLLSRC = HSI16
+                    1<<25 bitor //PLLQ = /2
+                    1<<17; //PLLP = /2
+
+                *(volatile u32*)(0x4002'2000) or_eq 2; //FLASH wait state 2
+
+                MCU::RCCreg.CR or_eq 1<<24; //PLLON
+                while( not (MCU::RCCreg.CR bitand (1<<25)) ){}
+
+                MCU::RCCreg.CFGR = 2; //SW = PLLRCLK               
+
+                // USART2 can only use PCLK, so need to update baud register
+                // (is initially setup in constructor, which is using 16MHz)
+                Open device{ board.uart };  //get uart (will not fail)             
+                auto& uart{ *device.pointer() };
+                uart.cpuSpeedUpdate(); //recompute baud register value
+                device.close(); //release uart
+                }
+
+
+//........................................................................................
+
+Atask task1;
+static bool task1run(Task_t& task){ return task1.run(task); };
+Atask task2;
+static bool task2run(Task_t& task){ return task2.run(task); };
+Atask task3;
+static bool task3run(Task_t& task){ return task3.run(task); };
+Atask task4;
+static bool task4run(Task_t& task){ return task4.run(task); };
+
 
                 int
 main            ()
                 {
 
                 //boot up code = 22 (in System.hpp)
-                Open device{ board.led };
-                if( device ){
-                    device.pointer()->infoCode( System::BOOT_CODE ); 
-                    device.close();
-                    }
-
+                board.led.infoCode( System::BOOT_CODE ); 
+                //led is now free to use (now used only by ledMorseCode task)
+    
                 //systimer started at first use (infoCode uses systimer, so already started)
                 //restart systimer after any clock speed changes do it recomputes its values
                 //(if systimer depends on cpu speed, lptim based systimer have a fixed clock speed)
@@ -343,6 +346,12 @@ main            ()
 
                 //lptim always uses the same clock, but can use restart() to change
                 //its default interrupt priority
+
+
+                System::cpuHz_ = 64'000'000ul; //update to new speed
+                clockInit(); //go faster
+                //we are using lptim for systimer which has a fixed clock, so no need to update
+
 
                 //add tasks
 
@@ -352,11 +361,15 @@ main            ()
                 // tasks.insert( showRandSeeds );
                 
                 tasks.insert( ledMorseCode, 80ms ); //interval is morse code DOT length
-                tasks.insert( SomeTasks::runAll, 10ms ); //a separate set of tasks, 10ms interval
-                tasks.insert( printTask, 500ms );
-                tasks.insert( printRandom, 4000ms );
+                tasks.insert( printTask, 50ms );
+                tasks.insert( printRandom, 250ms );
                 tasks.insert( checkRstPin, 1000ms );
                 // tasks.insert( printDouble, 100ms );
+
+                // tasks.insert( task1run, 100ms );
+                // tasks.insert( task2run, 100ms );
+                // tasks.insert( task3run, 100ms );
+                // tasks.insert( task4run, 100ms );
 
                 //all tasks run in idle (not in an interrupt)
                 //so all tasks are interruptable, but not from other tasks
